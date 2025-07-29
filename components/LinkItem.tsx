@@ -37,10 +37,11 @@ export const LinkItem: React.FC<LinkItemProps> = ({ link, isOpened, onDelete, on
     };
     
     const performDelete = () => handleAction(() => onDelete(link.id, link.url));
-    const performOpen = () => {
-        if(link.url) window.open(link.url, '_blank', 'noopener,noreferrer');
+    const performOpen = (_e: React.MouseEvent<HTMLButtonElement>) => {
+        if (!link.url) return;
+        window.open(link.url, '_blank', 'noopener,noreferrer');
         handleAction(() => {
-            if (link.url) onOpen(link.url);
+            onOpen(link.url!);
             onDelete(link.id, link.url);
         });
     };
@@ -142,7 +143,7 @@ export const LinkItem: React.FC<LinkItemProps> = ({ link, isOpened, onDelete, on
             <div className="grid grid-cols-3 gap-0 mt-3 sm:mt-0 sm:ml-4 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200 self-center">
                 <button type="button" title="Timeout User" onClick={() => handleModeration('timeoutUser')} className="p-2 rounded-full hover:bg-yellow-500/20 text-yellow-500"><UserX size={16} /></button>
                 <button type="button" title="Blacklist User" onClick={() => handleModeration('blacklistUser')} className="p-2 rounded-full hover:bg-red-500/20 text-red-500"><ShieldBan size={16} /></button>
-                <button type="button" title="Open & Remove" onClick={performOpen} disabled={!link.url} className="p-2 rounded-full hover:bg-green-500/20 text-green-500 disabled:opacity-30 disabled:cursor-not-allowed"><ExternalLink size={16} /></button>
+                <button type="button" title="Open & Remove" onClick={performOpen} onAuxClick={performOpen} disabled={!link.url} className="p-2 rounded-full hover:bg-green-500/20 text-green-500 disabled:opacity-30 disabled:cursor-not-allowed"><ExternalLink size={16} /></button>
                 <button type="button" title="Timeout Link" onClick={() => handleModeration('timeoutLink')} disabled={!link.url} className="p-2 rounded-full hover:bg-yellow-500/20 text-yellow-500 disabled:opacity-30 disabled:cursor-not-allowed"><Timer size={16} /></button>
                 <button type="button" title="Blacklist Link" onClick={() => handleModeration('blacklistLink')} disabled={!link.url} className="p-2 rounded-full hover:bg-red-500/20 text-red-500 disabled:opacity-30 disabled:cursor-not-allowed"><Link2Off size={16} /></button>
                 <button type="button" title="Remove" onClick={performDelete} className="p-2 rounded-full hover:bg-red-500/20 text-red-500"><Trash2 size={16} /></button>
