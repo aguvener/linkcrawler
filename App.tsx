@@ -307,7 +307,7 @@ const App: React.FC = () => {
                         newOpenedLinks[link.url] = Date.now();
                         openedCount++;
                     } else {
-                        showToast('Pop-up blocked. Please allow pop-ups for this site.', 'error');
+                        // Pop-up might be blocked, but we don't want to show a toast.
                     }
 
                     if (index === linksToProcess.length - 1) {
