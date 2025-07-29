@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <title>Kick Link Crawler</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="script-src 'self' https://static.cloudflareinsights.com">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+    <meta name="description" content="Kick Link Crawler">
+    <meta name="author" content="ses_muhendisi">
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <base target="_blank">
+</head>
+<body data-default-user="BurakSakinOl">
+    <div id="loading">Fetching channel info (max 5 tries)...</div>
+    <div id="search-filter-bar">
+        <input type="text" id="search-input" placeholder="Link ara...">
+        <select id="filter-select" title="Filter links">
+            <option value="all">Tümü</option>
+            <option value="urgent">Acil</option>
+            <option value="duplicates">Tekrarlar</option>
+            <option value="history">Geçmiş</option>
+        </select>
+    </div>
+    <div id="links-container">
+    </div>
+
+    <div id="settings-modal" class="modal">
+        <div class="modal-content settings-modal-content">
+            <span class="close-modal close-settings-modal"></span>
+            <button id="manage-timeouts-btn" class="manage-btn">Timeouts</button>
+            <button id="manage-blacklist-btn" class="manage-btn">Blacklist</button>
+            <button id="manage-link-blacklist-btn" class="manage-btn">Link Blacklist</button>
+            <button id="manage-trusted-btn" class="manage-btn">Trusted Users</button>
+            <button id="reset-counts-btn" class="manage-btn">Reset Counts</button>
+            <button id="export-settings-btn" class="manage-btn">Export</button>
+            <button id="import-settings-btn" class="manage-btn">Import</button>
+            <div class="settings-option">
+                <label for="test-mode-toggle">Test Modu (Rastgele Linkler)</label>
+                <input type="checkbox" id="test-mode-toggle">
+            </div>
+        </div>
+    </div>
+    
+    <!-- Blacklist Modal -->
+    <div id="blacklist-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal"></span>
+            <h2>Manage Blacklisted Users</h2>
+            <div id="blacklist-items">
+            </div>
+        </div>
+    </div>
+
+    <!-- Timeout Modal -->
+    <div id="timeout-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal close-timeout-modal"></span>
+            <h2>Active Link Timeouts</h2>
+            <div id="timeout-items">
+            </div>
+            <button id="clear-timeouts-btn">Clear All</button>
+            <h2>Active User Timeouts</h2>
+            <div id="user-timeout-items">
+            </div>
+            <button id="clear-user-timeouts-btn">Clear All</button>
+        </div>
+    </div>
+
+    <!-- Link Blacklist Modal -->
+    <div id="link-blacklist-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal"></span>
+            <h2>Manage Blacklisted Links</h2>
+            <div id="link-blacklist-items">
+            </div>
+        </div>
+    </div>
+
+    <!-- Trusted Users Modal -->
+    <div id="trusted-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal"></span>
+            <h2>Manage Trusted Users</h2>
+            <input id="trusted-input" type="text" placeholder="Enter nickname">
+            <button id="add-trusted-btn">Add</button>
+            <div id="trusted-items">
+            </div>
+        </div>
+    </div>
+
+    <!-- Updates Modal -->
+    <div id="updates-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal close-updates-modal"></span>
+            <div id="updates-content"></div>
+        </div>
+    </div>
+
+    <!-- Stats Modal -->
+    <div id="stats-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal close-stats-modal"></span>
+            <div id="stats-content"></div>
+        </div>
+    </div>
+
+    <div id="status-message" class="hidden"></div>
+    <div class="credit-bar">
+        <button id="open-all-btn" class="manage-btn">Open All (0)</button>
+        <div>Made with ♥️ by ses_muhendisi for <a href="https://kick.com/BurakSakinOl" rel="noopener">BurakSakinOl</a></div>
+        <button id="stats-btn" class="manage-btn">Stats</button>
+        <button id="settings-btn" class="manage-btn">Settings</button>
+        <button id="sayac-btn" class="manage-btn">Sayaç</button>
+    </div>
+    <script src="config.js"></script>
+    <script src="marked.min.js"></script>
+    <script src="dompurify.min.js"></script>
+    <script src="link_crawler.js"></script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+{
+  "name": "linkcrawler",
+  "version": "1.0.0",
+  "description": "Kick Chat Link Crawler",
+  "scripts": {
+    "test": "jest"
+  },
+  "devDependencies": {
+    "jest": "^30.0.4",
+    "jest-environment-jsdom": "^30.0.4",
+    "jsdom": "^26.1.0"
+  },
+  "jest": {
+    "testEnvironment": "jsdom"
+  }
+}

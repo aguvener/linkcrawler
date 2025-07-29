@@ -1,0 +1,1 @@
+window.DEFAULT_USERNAME = 'BurakSakinOl';
