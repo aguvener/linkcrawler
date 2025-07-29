@@ -1,6 +1,6 @@
 import React from 'react';
 import { FilterType } from '../../types';
-import { Search, SlidersHorizontal, User } from 'lucide-react';
+import { Search, SlidersHorizontal, User, Github } from 'lucide-react';
 
 interface HeaderProps {
     progress: number;
@@ -17,11 +17,16 @@ export const Header: React.FC<HeaderProps> = ({searchQuery, setSearchQuery, filt
     return (
         <header className="bg-slate-900/80 backdrop-blur-sm shadow-lg shadow-black/20 p-3 z-20">
             <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center space-x-2">
-                    <img src="https://kick.com/favicon.ico" alt="Kick Logo" className="w-6 h-6 rounded-md"/>
-                    <h1 className="text-xl font-bold text-white hidden sm:block">
-                        Kick Link Crawler
-                    </h1>
+                <div className="flex items-center space-x-4">
+                    <div className="flex items-center space-x-2">
+                        <img src="https://kick.com/favicon.ico" alt="Kick Logo" className="w-6 h-6 rounded-md"/>
+                        <h1 className="text-xl font-bold text-white hidden sm:block">
+                            Kick Link Crawler
+                        </h1>
+                    </div>
+                    <a href="https://github.com/aguvener/linkcrawler" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-white transition-colors">
+                        <Github size={24} />
+                    </a>
                 </div>
                 <div className="flex items-center space-x-2 text-sm text-slate-300">
                     <User size={16} />
