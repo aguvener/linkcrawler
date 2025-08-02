@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import Favicon from 'react-favicon';
 import { LinkItemData, FilterType, Settings } from './types';
 import { useKickChat } from './hooks/useKickChat';
 import { useLocalStorage } from './hooks/useLocalStorage';
@@ -492,6 +493,7 @@ const App: React.FC = () => {
 
     return (
         <div className="flex flex-col h-screen bg-slate-900 text-slate-100 font-sans overflow-hidden">
+            <Favicon url="/favicon.ico" alertCount={filteredLinks.filter(link => link.url && !openedLinks[link.url]).length} iconSize={128} />
             <Header 
                 progress={totalMessages}
                 goal={PROGRESS_GOAL}
