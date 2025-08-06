@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { LinkItemData } from '../types';
 import { Clock, User, MessageSquare, ExternalLink, Trash2, ShieldBan, Link2Off, Timer, UserX } from 'lucide-react';
+import { LinkWithPreview } from './preview/LinkWithPreview';
 
 interface LinkItemProps {
     link: LinkItemData;
@@ -127,14 +128,19 @@ export const LinkItem: React.FC<LinkItemProps> = ({ link, isOpened, onDelete, on
                 {link.url && (
                     <div className="flex items-center gap-2">
                         <div className="flex items-center">
-                            <User size={14} className="mr-1.5"/> 
+                            <User size={14} className="mr-1.5"/>
                             <span className="font-semibold text-slate-300 flex items-center justify-center">{link.sender}:</span>
                         </div>
-                        <a href={link.url} target="_blank" rel="noopener noreferrer" 
-                           onClick={() => onOpen(link.url)}
-                           className="text-cyan-400 font-medium break-all hover:underline hover:text-cyan-300 transition-colors">
-                            {link.displayText || link.url}
-                        </a>
+                        <LinkWithPreview
+                          href={link.url}
+                          placement="top"
+                          delay={200}
+                          cacheTTL={60 * 60 * 1000}
+                          onClick={() => onOpen(link.url!)}
+                          className="text-cyan-400 font-medium break-all hover:underline hover:text-cyan-300 transition-colors"
+                        >
+                          {link.displayText || link.url}
+                        </LinkWithPreview>
                     </div>
                 )}
 

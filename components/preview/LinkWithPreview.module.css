@@ -1,0 +1,137 @@
+.wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.card {
+  position: absolute;
+  z-index: 1000;
+  pointer-events: auto;
+  background: #0f172a; /* slate-900 */
+  color: #e2e8f0; /* slate-200 */
+  border: 1px solid rgba(148, 163, 184, 0.2); /* slate-400/20 */
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+  padding: 8px;
+  transition: opacity 120ms ease, transform 120ms ease;
+  opacity: 1;
+}
+
+.top {
+  left: 0;
+  bottom: calc(100% + 8px);
+}
+
+.bottom {
+  left: 0;
+  top: calc(100% + 8px);
+}
+
+.left {
+  right: calc(100% + 8px);
+  top: 0;
+}
+
+.right {
+  left: calc(100% + 8px);
+  top: 0;
+}
+
+.inner {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Reserve header area to reduce layout shift (acts like a fixed header height) */
+.headerArea {
+  height: 0px;
+}
+
+.skeleton {
+  display: grid;
+  grid-template-rows: 160px 18px 14px;
+  gap: 8px;
+}
+
+.skelImage {
+  width: 100%;
+  height: 160px;
+  border-radius: 8px;
+  background: linear-gradient(90deg, rgba(51,65,85,0.6) 25%, rgba(71,85,105,0.6) 37%, rgba(51,65,85,0.6) 63%);
+  background-size: 400% 100%;
+  animation: shimmer 1.2s linear infinite;
+}
+
+.skelTitle, .skelDesc {
+  border-radius: 6px;
+  background: linear-gradient(90deg, rgba(51,65,85,0.6) 25%, rgba(71,85,105,0.6) 37%, rgba(51,65,85,0.6) 63%);
+  background-size: 400% 100%;
+  animation: shimmer 1.2s linear infinite;
+}
+.skelTitle { height: 18px; width: 80%; }
+.skelDesc { height: 14px; width: 95%; }
+
+@keyframes shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.imageWrap {
+  width: 100%;
+  height: 160px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: #111827; /* gray-900 */
+  border: 1px solid rgba(148, 163, 184, 0.14);
+}
+.imageWrap img {
+  width: 100%;
+  height: 160px;
+  object-fit: cover;
+  display: block;
+}
+
+.textWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.metaRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.domain {
+  font-size: 12px;
+  color: #94a3b8; /* slate-400 */
+}
+
+.title {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.3;
+  color: #e2e8f0; /* slate-200 */
+  font-weight: 600;
+}
+
+.desc {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.35;
+  color: #cbd5e1; /* slate-300 */
+}
+
+.errorMsg {
+  margin: 0;
+  font-size: 13px;
+  color: #fca5a5; /* red-300 */
+}
