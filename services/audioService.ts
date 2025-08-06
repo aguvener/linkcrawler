@@ -14,7 +14,7 @@ export const initializeAudio = () => {
             source.connect(audioCtx.destination);
             source.start(0);
         } catch(e) {
-            console.error("Could not initialize AudioContext", e)
+            console.error("Could not initialize AudioContext", e);
         }
     }
     if (typeof window !== 'undefined' && 'speechSynthesis' in window && !isSpeechInitialized) {
@@ -39,7 +39,8 @@ export const playBeep = (volume = 0.5) => {
 };
 
 export const speakText = (text: string, lang = 'tr-TR', volume = 0.5) => {
-    if (!('speechSynthesis' in window)) return;
+    // SSR-safe: ensure window and speechSynthesis exist
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
     window.speechSynthesis.cancel();
     const utter = new SpeechSynthesisUtterance(text);
     utter.lang = lang;
