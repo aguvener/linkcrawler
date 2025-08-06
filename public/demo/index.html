@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Update Notify Demo (Vanilla)</title>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <link rel="icon" href="/favicon.ico" />
+    <style>
+      body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif; background:#0f172a; color:#e2e8f0; }
+      .container { max-width: 760px; margin: 2rem auto; padding: 0 1rem; }
+      .card { background:#0b1220; border:1px solid #334155; border-radius: 12px; padding: 16px; }
+      .row { display:flex; gap:12px; align-items:center; margin: 8px 0; }
+      label { min-width: 200px; }
+      input, select { background:#0b1220; color:#e2e8f0; border:1px solid #475569; border-radius: 8px; padding: 8px; }
+      button { background:#2563eb; color:white; border:none; border-radius:10px; padding:8px 14px; cursor:pointer; }
+      button.secondary { background:transparent; border:1px solid #64748b; color:#e2e8f0; }
+      .muted { color:#94a3b8; font-size: 0.9rem; }
+      .update-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.6); display:flex; align-items:center; justify-content:center; z-index: 1000; }
+      .update-modal { width: min(92vw, 720px); max-height: 80vh; overflow: hidden; background: #0b1220; border: 1px solid #334155; border-radius: 16px; box-shadow: 0 20px 60px rgba(0,0,0,.5); display:flex; flex-direction:column; }
+      .update-modal header, .update-modal footer { padding: 12px 16px; border-bottom: 1px solid #1f2937; }
+      .update-modal footer { border-top: 1px solid #1f2937; border-bottom: 0; display:flex; justify-content: flex-end; gap: 8px; }
+      .update-modal main { padding: 12px 16px; overflow: auto; }
+      .update-modal h2 { margin: 0; font-size: 1.125rem; }
+      details.update-release { background: rgba(148,163,184,0.08); border:1px solid rgba(51,65,85,0.9); border-radius: 12px; margin: 8px 0; padding: 8px 12px; }
+      details.update-release summary { cursor: pointer; font-weight: 600; color:#e2e8f0; }
+      details.update-release summary::-webkit-details-marker { display:none; }
+      details.update-release summary::before { content: '▸'; display:inline-block; margin-right: 8px; transition: transform .2s ease; }
+      details.update-release[open] summary::before { transform: rotate(90deg); }
+      pre.update-summary { white-space: pre-wrap; color:#cbd5e1; margin:6px 0 0 0; }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Vanilla Update Notification Demo</h1>
+      <p class="muted">This page demonstrates the client-side versioning + update modal using plain JS, fetching /CHANGELOG.md.</p>
+      <div class="card">
+        <div class="row">
+          <label for="version">Current App Version</label>
+          <input id="version" type="text" value="1.4.0" />
+        </div>
+        <div class="row">
+          <label for="interval">Check Interval (ms)</label>
+          <input id="interval" type="number" value="0" />
+        </div>
+        <div class="row">
+          <label for="minorMajorOnly">Minor/Major only</label>
+          <select id="minorMajorOnly">
+            <option value="true" selected>true</option>
+            <option value="false">false</option>
+          </select>
+        </div>
+        <div class="row">
+          <label for="allowPrerelease">Allow prerelease if from prerelease</label>
+          <select id="allowPrerelease">
+            <option value="true" selected>true</option>
+            <option value="false">false</option>
+          </select>
+        </div>
+        <div class="row">
+          <button id="start">Start Controller</button>
+          <button id="reset" class="secondary">Reset Storage</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="modal-root"></div>
+
+    <script type="module" src="./update-notify.js"></script>
+  </body>
+</html>

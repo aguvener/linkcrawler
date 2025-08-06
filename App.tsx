@@ -17,6 +17,8 @@ import { Spinner } from './components/ui/Spinner';
 import { ToastContainer, ToastMessage } from './components/ui/Toast';
 import { SettingsModal } from './components/modals/SettingsModal';
 import { BatchOpenModal } from './components/modals/BatchOpenModal';
+import { UpdateModal } from './components/modals/UpdateModal';
+import { useUpdateNotifications } from './hooks/useUpdateNotifications';
 
 
 const App: React.FC = () => {
@@ -43,6 +45,18 @@ const App: React.FC = () => {
 
     const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
     const [isBatchOpenModalOpen, setIsBatchOpenModalOpen] = useState(false);
+
+    // Update notifications integration
+    // Define the current app version here; update when you release.
+    const APP_VERSION = '1.2.0';
+    const { isOpen: isUpdateOpen, html: updateHtml, close: closeUpdate, acknowledge: acknowledgeUpdate } =
+        useUpdateNotifications({
+            appVersion: APP_VERSION,
+            changelogUrl: '/CHANGELOG.md',
+            checkOnIntervalMs: 0, // no polling
+            minorMajorOnly: true, // show only for minor/major by default
+            allowPrereleaseIfFromPrerelease: true, // prereleases eligible if last seen is prerelease
+        });
     
     const showToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
         const id = Date.now();
@@ -494,7 +508,7 @@ const App: React.FC = () => {
     return (
         <div className="flex flex-col h-screen bg-slate-900 text-slate-100 font-sans overflow-hidden">
             <Favicon url="/favicon.ico" alertCount={filteredLinks.filter(link => link.url && !openedLinks[link.url]).length} iconSize={128} />
-            <Header 
+            <Header
                 progress={totalMessages}
                 goal={PROGRESS_GOAL}
                 searchQuery={searchQuery}
@@ -507,7 +521,7 @@ const App: React.FC = () => {
             <main className="flex-1 overflow-y-auto pb-24">
                 {mainContent}
             </main>
-            <Footer 
+            <Footer
                 onBatchOpen={() => setIsBatchOpenModalOpen(true)}
                 onSettings={() => setIsSettingsModalOpen(true)}
                 openLinkCount={filteredLinks.filter(link => link.url && !openedLinks[link.url]).length}
@@ -519,7 +533,7 @@ const App: React.FC = () => {
                 onConfirm={handleBatchOpen}
                 totalLinks={filteredLinks.filter(link => link.url && !openedLinks[link.url]).length}
             />
-            <SettingsModal 
+            <SettingsModal
                 isOpen={isSettingsModalOpen}
                 onClose={() => setIsSettingsModalOpen(false)}
                 blacklist={blacklist}
@@ -537,6 +551,13 @@ const App: React.FC = () => {
                 showToast={showToast}
                 testMode={testMode}
                 setTestMode={setTestMode}
+            />
+            {/* Update Notification Modal */}
+            <UpdateModal
+                isOpen={isUpdateOpen}
+                onClose={closeUpdate}
+                onAcknowledge={acknowledgeUpdate}
+                html={updateHtml}
             />
             <ToastContainer toasts={toasts} />
         </div>
