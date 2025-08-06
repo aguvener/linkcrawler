@@ -134,9 +134,14 @@ export const LinkItem: React.FC<LinkItemProps> = ({ link, isOpened, onDelete, on
                         <LinkWithPreview
                           href={link.url}
                           placement="top"
-                          delay={200}
+                          delay={180}
+                          hideDelay={240}
+                          headerOffsetPx={64}
+                          maxWidthPx={360}
+                          maxHeightPx={380}
                           cacheTTL={60 * 60 * 1000}
-                          onClick={() => onOpen(link.url!)}
+                          // Do NOT require click-and-hold; keep normal hover. Preserve click to open in a new tab via anchor default.
+                          // Move onOpen side-effect to an explicit icon/button to avoid interfering with hover.
                           className="text-cyan-400 font-medium break-all hover:underline hover:text-cyan-300 transition-colors"
                         >
                           {link.displayText || link.url}

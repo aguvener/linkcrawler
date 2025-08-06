@@ -2,26 +2,33 @@ import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from 
 import { fetchPreviewClientOnly } from "../../services/fetchPreview";
 import { getDomain, getOrFetch, type PreviewResult, type PreviewData } from "../../services/previewCache";
 import styles from "./LinkWithPreview.module.css";
+import { createPortal } from "react-dom";
 
 type Placement = "top" | "bottom" | "left" | "right";
 
 export interface LinkWithPreviewProps extends React.AnchorHTMLAttributes<HTMLAnchorElement> {
   href: string;
-  placement?: Placement;
+  placement?: Placement; // preferred placement; "top" by default, but auto will adjust
   delay?: number; // ms before showing preview on hover/focus
+  hideDelay?: number; // ms before hiding on leave/blur
   cacheTTL?: number; // ms
   className?: string;
   children?: React.ReactNode;
+  headerOffsetPx?: number; // fixed header height if any, used for top-boundary clamping
+  maxWidthPx?: number; // max width for card
+  maxHeightPx?: number; // max height for card
 }
 
 /**
  * Accessible, client-only link preview. Shows on hover/focus with debounce,
  * hides on leave/blur/scroll/Escape. Prefetches when link enters viewport.
+ * Smart auto-positioning with viewport collision avoidance.
  */
 export const LinkWithPreview: React.FC<LinkWithPreviewProps> = ({
   href,
   placement = "top",
-  delay = 200,
+  delay = 80,
+  hideDelay = 280,
   cacheTTL = 60 * 60 * 1000, // 1h
   className,
   children,
@@ -30,16 +37,25 @@ export const LinkWithPreview: React.FC<LinkWithPreviewProps> = ({
   onMouseEnter,
   onMouseLeave,
   onKeyDown,
+  headerOffsetPx = 0,
+  maxWidthPx = 360,
+  maxHeightPx = 380,
   ...rest
 }) => {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<PreviewResult | null>(null);
+  const [computedPlacement, setComputedPlacement] = useState<Placement>(placement);
 
   const linkRef = useRef<HTMLAnchorElement | null>(null);
   const cardRef = useRef<HTMLDivElement | null>(null);
   const showTimer = useRef<number | null>(null);
+  const hideTimer = useRef<number | null>(null);
   const isMounted = useRef(true);
+  const rafPos = useRef<number | null>(null);
+  const portalEl = useRef<HTMLDivElement | null>(null);
+  const [mounted, setMounted] = useState(false);
+  const [portalReady, setPortalReady] = useState(false);
 
   const tooltipId = useId();
 
@@ -53,6 +69,31 @@ export const LinkWithPreview: React.FC<LinkWithPreviewProps> = ({
       return null;
     }
   }, [href]);
+
+  // Create a global portal container for the floating card (prevents stacking conflicts)
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const el = document.createElement("div");
+    el.style.position = "fixed";
+    el.style.inset = "0";
+    el.style.pointerEvents = "none"; // Let our card manage pointer events
+    el.style.zIndex = "2147483646";
+    el.style.isolation = "isolate";
+    portalEl.current = el;
+    document.body.appendChild(el);
+    setMounted(true);
+    // Mark portal as ready as soon as it's appended; a microtask ensures layout ready
+    Promise.resolve().then(() => {
+      setPortalReady(true);
+      console.debug("[LWP] portal ready");
+    });
+    return () => {
+      portalEl.current?.parentElement?.removeChild(portalEl.current);
+      portalEl.current = null;
+      setPortalReady(false);
+      setMounted(false);
+    };
+  }, []);
 
   // Prefetch when in viewport
   useEffect(() => {
@@ -82,23 +123,129 @@ export const LinkWithPreview: React.FC<LinkWithPreviewProps> = ({
         window.clearTimeout(showTimer.current);
         showTimer.current = null;
       }
+      if (hideTimer.current) {
+        window.clearTimeout(hideTimer.current);
+        hideTimer.current = null;
+      }
+      if (rafPos.current) {
+        cancelAnimationFrame(rafPos.current);
+        rafPos.current = null;
+      }
       removeGlobalListeners();
     };
   }, []);
 
+  const recomputePlacement = useCallback(() => {
+    if (!linkRef.current || !cardRef.current) return;
+
+    const trigger = linkRef.current.getBoundingClientRect();
+    const card = cardRef.current.getBoundingClientRect();
+    const vw = document.documentElement.clientWidth;
+    const vh = document.documentElement.clientHeight;
+
+    // Calculate available space
+    const spaceTop = trigger.top - headerOffsetPx;
+    const spaceBottom = vh - trigger.bottom;
+    const spaceLeft = trigger.left;
+    const spaceRight = vw - trigger.right;
+
+    // Prefer preference, then fallbacks that fit
+    const fitsTop = card.height + 12 <= spaceTop;
+    const fitsBottom = card.height + 12 <= spaceBottom;
+    const fitsLeft = card.width + 12 <= spaceLeft;
+    const fitsRight = card.width + 12 <= spaceRight;
+
+    const ordered: Placement[] = (() => {
+      switch (placement) {
+        case "bottom": return ["bottom", "top", "right", "left"];
+        case "left": return ["left", "right", "top", "bottom"];
+        case "right": return ["right", "left", "top", "bottom"];
+        case "top":
+        default: return ["top", "bottom", "right", "left"];
+      }
+    })();
+
+    const fits: Record<Placement, boolean> = {
+      top: fitsTop,
+      bottom: fitsBottom,
+      left: fitsLeft,
+      right: fitsRight,
+    };
+
+    const best = ordered.find(p => fits[p]) ?? (spaceBottom >= spaceTop ? "bottom" : "top");
+    setComputedPlacement(best);
+
+    // Also clamp horizontally/vertically to viewport to avoid overflow
+    const margin = 8;
+    let left = 0;
+    let top = 0;
+
+    if (best === "top") {
+      top = Math.max(headerOffsetPx + margin, trigger.top - card.height - margin);
+      left = Math.max(margin, Math.min(trigger.left, vw - card.width - margin));
+    } else if (best === "bottom") {
+      top = Math.min(vh - card.height - margin, trigger.bottom + margin);
+      left = Math.max(margin, Math.min(trigger.left, vw - card.width - margin));
+    } else if (best === "left") {
+      top = Math.max(headerOffsetPx + margin, Math.min(trigger.top, vh - card.height - margin));
+      left = Math.max(margin, trigger.left - card.width - margin);
+    } else {
+      // right
+      top = Math.max(headerOffsetPx + margin, Math.min(trigger.top, vh - card.height - margin));
+      left = Math.min(vw - card.width - margin, trigger.right + margin);
+    }
+
+    // Apply to fixed-positioned portal card
+    const cardEl = cardRef.current;
+    cardEl.style.position = "fixed";
+    cardEl.style.top = `${Math.round(top)}px`;
+    cardEl.style.left = `${Math.round(left)}px`;
+    cardEl.style.right = "";
+    cardEl.style.bottom = "";
+    cardEl.style.maxWidth = `${maxWidthPx}px`;
+    cardEl.style.maxHeight = `${maxHeightPx}px`;
+    // Enable pointer interactions after it is placed
+    cardEl.style.pointerEvents = "auto";
+  }, [headerOffsetPx, placement, maxWidthPx, maxHeightPx]);
+
+  const scheduleRecompute = useCallback(() => {
+    if (rafPos.current) cancelAnimationFrame(rafPos.current);
+    rafPos.current = requestAnimationFrame(() => {
+      rafPos.current = null;
+      recomputePlacement();
+    });
+  }, [recomputePlacement]);
+
   const openCard = useCallback(async () => {
     if (!safeHref) return;
+    if (!portalReady) {
+      console.debug("[LWP] openCard blocked: portal not ready");
+      return;
+    }
+    // debug
+    console.debug("[LWP] openCard: setOpen(true) for", safeHref);
     setOpen(true);
 
+    // Place immediately in next frame for "buttery" feel
+    requestAnimationFrame(() => {
+      console.debug("[LWP] scheduleRecompute via rAF");
+      scheduleRecompute();
+    });
+
     // If we already have data or error, do not refetch immediately
-    if (result) return;
+    if (result) {
+      console.debug("[LWP] openCard: using existing result");
+      return;
+    }
 
     setLoading(true);
+    console.debug("[LWP] fetching preview...");
     const r = await getOrFetch(safeHref, (u) => fetchPreviewClientOnly(u), cacheTTL);
     if (!isMounted.current) return;
     setResult(r);
     setLoading(false);
-  }, [safeHref, cacheTTL, result]);
+    console.debug("[LWP] fetch complete", r && ("error" in r ? "error" : "ok"));
+  }, [safeHref, cacheTTL, result, scheduleRecompute]);
 
   const closeCard = useCallback(() => {
     setOpen(false);
@@ -109,11 +256,32 @@ export const LinkWithPreview: React.FC<LinkWithPreviewProps> = ({
       window.clearTimeout(showTimer.current);
       showTimer.current = null;
     }
+    if (hideTimer.current) {
+      window.clearTimeout(hideTimer.current);
+      hideTimer.current = null;
+    }
+    if (!portalReady) {
+      console.debug("[LWP] scheduleOpen deferred: portal not ready");
+      // try again shortly until portal is ready
+      showTimer.current = window.setTimeout(() => {
+        showTimer.current = null;
+        if (!portalReady) {
+          console.debug("[LWP] re-scheduleOpen: portal still not ready");
+          scheduleOpen();
+          return;
+        }
+        console.debug("[LWP] scheduleOpen: firing openCard after portal ready");
+        void openCard();
+      }, Math.max(0, Math.min(120, delay)));
+      return;
+    }
+    console.debug("[LWP] scheduleOpen: scheduling in", Math.max(0, delay), "ms");
     showTimer.current = window.setTimeout(() => {
       showTimer.current = null;
+      console.debug("[LWP] scheduleOpen: firing openCard");
       void openCard();
     }, Math.max(0, delay));
-  }, [openCard, delay]);
+  }, [openCard, delay, portalReady]);
 
   const cancelScheduledOpen = useCallback(() => {
     if (showTimer.current) {
@@ -124,19 +292,33 @@ export const LinkWithPreview: React.FC<LinkWithPreviewProps> = ({
 
   const handleMouseEnter = (e: React.MouseEvent<HTMLAnchorElement>) => {
     onMouseEnter?.(e);
+    const buttons = (e as any).buttons;
+    const which = (e as any).which;
+    const anyButtonsPressed =
+      (typeof buttons === "number" && buttons !== 0) ||
+      (typeof which === "number" && which !== 0);
+    console.debug("[LWP] onMouseEnter: buttons", buttons, "which", which, "pressed?", anyButtonsPressed);
+    // Relaxed gating: allow hover even if drivers misreport which but buttons===0
+    if (typeof buttons === "number" && buttons !== 0) {
+      console.debug("[LWP] onMouseEnter: blocking due to buttons!=0");
+      return;
+    }
     scheduleOpen();
     addGlobalListeners();
   };
 
   const handleMouseLeave = (e: React.MouseEvent<HTMLAnchorElement>) => {
     onMouseLeave?.(e);
+    console.debug("[LWP] onMouseLeave");
     cancelScheduledOpen();
+    if (hideTimer.current) window.clearTimeout(hideTimer.current);
     // Delay close slightly to allow moving pointer into card
-    window.setTimeout(() => {
+    hideTimer.current = window.setTimeout(() => {
       if (!cardRef.current) return closeCard();
       const onOverCard = (cardRef.current as any).__hovering;
+      console.debug("[LWP] hideTimer(link): hovering card?", onOverCard);
       if (!onOverCard) closeCard();
-    }, 80);
+    }, Math.max(200, Math.min(600, hideDelay)));
   };
 
   const handleFocus = (e: React.FocusEvent<HTMLAnchorElement>) => {
@@ -148,12 +330,13 @@ export const LinkWithPreview: React.FC<LinkWithPreviewProps> = ({
   const handleBlur = (e: React.FocusEvent<HTMLAnchorElement>) => {
     onBlur?.(e);
     cancelScheduledOpen();
+    if (hideTimer.current) window.clearTimeout(hideTimer.current);
     // Close when focus leaves link and card
-    window.setTimeout(() => {
+    hideTimer.current = window.setTimeout(() => {
       if (!cardRef.current) return closeCard();
       const onOverCard = (cardRef.current as any).__hovering;
       if (!onOverCard && document.activeElement !== linkRef.current) closeCard();
-    }, 80);
+    }, Math.max(100, Math.min(700, hideDelay)));
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLAnchorElement>) => {
@@ -165,8 +348,10 @@ export const LinkWithPreview: React.FC<LinkWithPreviewProps> = ({
   };
 
   const onScrollOrResize = useCallback(() => {
-    closeCard();
-  }, [closeCard]);
+    // Recompute rather than always close; only close on large scrolls
+    if (!open) return;
+    scheduleRecompute();
+  }, [open, scheduleRecompute]);
 
   const onGlobalKey = useCallback((e: KeyboardEvent) => {
     if (e.key === "Escape") closeCard();
@@ -199,18 +384,20 @@ export const LinkWithPreview: React.FC<LinkWithPreviewProps> = ({
   // Track hover over card for small leave/blur grace period
   const cardMouseEnter = () => {
     if (cardRef.current) (cardRef.current as any).__hovering = true;
+    console.debug("[LWP] cardMouseEnter");
   };
   const cardMouseLeave = () => {
     if (cardRef.current) (cardRef.current as any).__hovering = false;
+    console.debug("[LWP] cardMouseLeave -> close after grace if link not focused");
     // close when leaving card if link not focused
     window.setTimeout(() => {
       if (document.activeElement !== linkRef.current) closeCard();
-    }, 50);
+    }, 120);
   };
 
-  // Positioning class
+  // Positioning class (use computedPlacement)
   const placementClass = useMemo(() => {
-    switch (placement) {
+    switch (computedPlacement) {
       case "bottom":
         return styles.bottom;
       case "left":
@@ -221,85 +408,114 @@ export const LinkWithPreview: React.FC<LinkWithPreviewProps> = ({
       default:
         return styles.top;
     }
-  }, [placement]);
+  }, [computedPlacement]);
 
   // ARIA: role=tooltip with id, and link gets aria-describedby while open
   return (
-    <span className={styles.wrapper}>
+    <span
+      className={styles.wrapper}
+      // capture-phase handlers to avoid missing the first enter due to bubbling quirks/overlays
+      onMouseEnterCapture={(e) => {
+        // do not duplicate if already open or scheduled; still let normal handler decide
+        console.debug("[LWP] onMouseEnterCapture");
+      }}
+      onMouseLeaveCapture={(e) => {
+        console.debug("[LWP] onMouseLeaveCapture");
+      }}
+      style={{ pointerEvents: "auto", position: "relative", zIndex: 0 }}
+    >
       <a
         {...rest}
         ref={linkRef}
         href={safeHref ?? href}
         target="_blank"
         rel="noopener noreferrer"
+        // Primary hover trigger via mouse events for smoother desktop behavior
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
+        // Keep pointer events as a fallback only (relaxed gating, log state)
+        onPointerEnter={(e) => {
+          const b = (e as any).buttons ?? 0;
+          console.debug("[LWP] onPointerEnter: buttons", b);
+          if (b !== 0) return;
+          handleMouseEnter(e as unknown as React.MouseEvent<HTMLAnchorElement>);
+        }}
+        onPointerLeave={(e) => {
+          console.debug("[LWP] onPointerLeave");
+          handleMouseLeave(e as unknown as React.MouseEvent<HTMLAnchorElement>);
+        }}
         onFocus={handleFocus}
         onBlur={handleBlur}
         onKeyDown={handleKeyDown}
         aria-describedby={open ? tooltipId : undefined}
+        aria-haspopup="dialog"
+        aria-expanded={open || undefined}
         className={className}
       >
         {children ?? href}
       </a>
 
-      {open && (
-        <div
-          id={tooltipId}
-          role="tooltip"
-          ref={cardRef}
-          className={`${styles.card} ${placementClass}`}
-          aria-live="polite"
-          onMouseEnter={cardMouseEnter}
-          onMouseLeave={cardMouseLeave}
-        >
-          <div className={styles.inner} style={{ minWidth: 280, maxWidth: 360 }}>
-            {/* Reserve space to avoid layout shift */}
-            <div className={styles.headerArea} aria-hidden="true"></div>
+      {mounted && open && portalEl.current
+        ? createPortal(
+            <div
+              id={tooltipId}
+              role="tooltip"
+              ref={cardRef}
+              className={`${styles.card} ${placementClass}`}
+              aria-live="polite"
+              onMouseEnter={cardMouseEnter}
+              onMouseLeave={cardMouseLeave}
+              style={{ minWidth: 280, maxWidth: maxWidthPx, maxHeight: maxHeightPx, pointerEvents: "auto" }}
+            >
+              <div className={styles.inner}>
+                <div className={styles.headerArea} aria-hidden="true"></div>
 
-            {loading && (
-              <div className={styles.skeleton}>
-                <div className={styles.skelImage} />
-                <div className={styles.skelTitle} />
-                <div className={styles.skelDesc} />
-              </div>
-            )}
-
-            {!loading && isError(result) && (
-              <div className={styles.content}>
-                <div className={styles.metaRow}>
-                  <span className={styles.domain}>{domain || "Preview"}</span>
-                </div>
-                <p className={styles.errorMsg}>Preview unavailable</p>
-              </div>
-            )}
-
-            {!loading && pv && (
-              <div className={styles.content}>
-                {pv.images?.[0] && (
-                  <div className={styles.imageWrap}>
-                    <img
-                      src={pv.images[0]}
-                      alt={pv.title ? `${pv.title} image` : ""}
-                      loading="lazy"
-                      width={320}
-                      height={160}
-                    />
+                {loading && (
+                  <div className={styles.skeleton} aria-busy="true">
+                    <div className={styles.skelImage} />
+                    <div className={styles.skelTitle} />
+                    <div className={styles.skelDesc} />
                   </div>
                 )}
 
-                <div className={styles.textWrap}>
-                  <div className={styles.metaRow}>
-                    <span className={styles.domain}>{pv.siteName || domain}</span>
+                {!loading && isError(result) && (
+                  <div className={styles.content}>
+                    <div className={styles.metaRow}>
+                      <span className={styles.domain}>{domain || "Preview"}</span>
+                    </div>
+                    <p className={styles.errorMsg}>Preview unavailable</p>
                   </div>
-                  {pv.title && <h4 className={styles.title}>{pv.title}</h4>}
-                  {pv.description && <p className={styles.desc}>{pv.description}</p>}
-                </div>
+                )}
+
+                {!loading && pv && (
+                  <div className={styles.content}>
+                    {pv.images?.[0] && (
+                      <div className={styles.imageWrap}>
+                        <img
+                          src={pv.images[0]}
+                          alt={pv.title ? `${pv.title} image` : ""}
+                          loading="lazy"
+                          width={320}
+                          height={160}
+                          decoding="async"
+                        />
+                      </div>
+                    )}
+
+                    <div className={styles.textWrap}>
+                      <div className={styles.metaRow}>
+                        <span className={styles.domain}>{pv.siteName || domain}</span>
+                      </div>
+                      {pv.title && <h4 className={styles.title}>{pv.title}</h4>}
+                      {pv.description && <p className={styles.desc}>{pv.description}</p>}
+                    </div>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-        </div>
-      )}
+            </div>,
+            portalEl.current
+          )
+        : null}
     </span>
   );
 };

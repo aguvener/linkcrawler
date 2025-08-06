@@ -5,7 +5,7 @@
 
 .card {
   position: absolute;
-  z-index: 1000;
+  z-index: 2147483646; /* ensure above headers/modals */
   pointer-events: auto;
   background: #0f172a; /* slate-900 */
   color: #e2e8f0; /* slate-200 */
@@ -15,26 +15,33 @@
   padding: 8px;
   transition: opacity 120ms ease, transform 120ms ease;
   opacity: 1;
+  overflow: auto; /* scroll for long content */
+  will-change: transform, opacity; /* perf hint */
+  backface-visibility: hidden;
 }
 
 .top {
   left: 0;
   bottom: calc(100% + 8px);
+  transform-origin: bottom left;
 }
 
 .bottom {
   left: 0;
   top: calc(100% + 8px);
+  transform-origin: top left;
 }
 
 .left {
   right: calc(100% + 8px);
   top: 0;
+  transform-origin: top right;
 }
 
 .right {
   left: calc(100% + 8px);
   top: 0;
+  transform-origin: top left;
 }
 
 .inner {
