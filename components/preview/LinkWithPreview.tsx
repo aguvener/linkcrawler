@@ -55,7 +55,6 @@ export const LinkWithPreview: React.FC<LinkWithPreviewProps> = ({
   const rafPos = useRef<number | null>(null);
   const portalEl = useRef<HTMLDivElement | null>(null);
   const [mounted, setMounted] = useState(false);
-  const [portalReady, setPortalReady] = useState(false);
 
   const tooltipId = useId();
 
@@ -82,15 +81,9 @@ export const LinkWithPreview: React.FC<LinkWithPreviewProps> = ({
     portalEl.current = el;
     document.body.appendChild(el);
     setMounted(true);
-    // Mark portal as ready as soon as it's appended; a microtask ensures layout ready
-    Promise.resolve().then(() => {
-      setPortalReady(true);
-      console.debug("[LWP] portal ready");
-    });
     return () => {
       portalEl.current?.parentElement?.removeChild(portalEl.current);
       portalEl.current = null;
-      setPortalReady(false);
       setMounted(false);
     };
   }, []);
@@ -218,11 +211,21 @@ export const LinkWithPreview: React.FC<LinkWithPreviewProps> = ({
 
   const openCard = useCallback(async () => {
     if (!safeHref) return;
-    if (!portalReady) {
-      console.debug("[LWP] openCard blocked: portal not ready");
-      return;
+    // If portal element not yet created, create it synchronously as a fallback
+    if (!portalEl.current && typeof document !== "undefined") {
+      const el = document.createElement("div");
+      el.style.position = "fixed";
+      el.style.inset = "0";
+      el.style.pointerEvents = "none";
+      el.style.zIndex = "2147483646";
+      el.style.isolation = "isolate";
+      document.body.appendChild(el);
+      portalEl.current = el;
+      setMounted(true);
+      console.debug("[LWP] portal created on-demand");
     }
-    // debug
+    if (!portalEl.current) return;
+
     console.debug("[LWP] openCard: setOpen(true) for", safeHref);
     setOpen(true);
 
@@ -260,28 +263,13 @@ export const LinkWithPreview: React.FC<LinkWithPreviewProps> = ({
       window.clearTimeout(hideTimer.current);
       hideTimer.current = null;
     }
-    if (!portalReady) {
-      console.debug("[LWP] scheduleOpen deferred: portal not ready");
-      // try again shortly until portal is ready
-      showTimer.current = window.setTimeout(() => {
-        showTimer.current = null;
-        if (!portalReady) {
-          console.debug("[LWP] re-scheduleOpen: portal still not ready");
-          scheduleOpen();
-          return;
-        }
-        console.debug("[LWP] scheduleOpen: firing openCard after portal ready");
-        void openCard();
-      }, Math.max(0, Math.min(120, delay)));
-      return;
-    }
     console.debug("[LWP] scheduleOpen: scheduling in", Math.max(0, delay), "ms");
     showTimer.current = window.setTimeout(() => {
       showTimer.current = null;
       console.debug("[LWP] scheduleOpen: firing openCard");
       void openCard();
     }, Math.max(0, delay));
-  }, [openCard, delay, portalReady]);
+  }, [openCard, delay]);
 
   const cancelScheduledOpen = useCallback(() => {
     if (showTimer.current) {
@@ -292,17 +280,8 @@ export const LinkWithPreview: React.FC<LinkWithPreviewProps> = ({
 
   const handleMouseEnter = (e: React.MouseEvent<HTMLAnchorElement>) => {
     onMouseEnter?.(e);
-    const buttons = (e as any).buttons;
-    const which = (e as any).which;
-    const anyButtonsPressed =
-      (typeof buttons === "number" && buttons !== 0) ||
-      (typeof which === "number" && which !== 0);
-    console.debug("[LWP] onMouseEnter: buttons", buttons, "which", which, "pressed?", anyButtonsPressed);
-    // Relaxed gating: allow hover even if drivers misreport which but buttons===0
-    if (typeof buttons === "number" && buttons !== 0) {
-      console.debug("[LWP] onMouseEnter: blocking due to buttons!=0");
-      return;
-    }
+    console.debug("[LWP] onMouseEnter");
+    // No gating — open on hover reliably
     scheduleOpen();
     addGlobalListeners();
   };
@@ -414,15 +393,7 @@ export const LinkWithPreview: React.FC<LinkWithPreviewProps> = ({
   return (
     <span
       className={styles.wrapper}
-      // capture-phase handlers to avoid missing the first enter due to bubbling quirks/overlays
-      onMouseEnterCapture={(e) => {
-        // do not duplicate if already open or scheduled; still let normal handler decide
-        console.debug("[LWP] onMouseEnterCapture");
-      }}
-      onMouseLeaveCapture={(e) => {
-        console.debug("[LWP] onMouseLeaveCapture");
-      }}
-      style={{ pointerEvents: "auto", position: "relative", zIndex: 0 }}
+      style={{ pointerEvents: "auto", position: "relative", zIndex: 1 }}
     >
       <a
         {...rest}
@@ -430,20 +401,9 @@ export const LinkWithPreview: React.FC<LinkWithPreviewProps> = ({
         href={safeHref ?? href}
         target="_blank"
         rel="noopener noreferrer"
-        // Primary hover trigger via mouse events for smoother desktop behavior
+        // Use only mouse events for reliability; remove pointer events to avoid duplication/quirks
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
-        // Keep pointer events as a fallback only (relaxed gating, log state)
-        onPointerEnter={(e) => {
-          const b = (e as any).buttons ?? 0;
-          console.debug("[LWP] onPointerEnter: buttons", b);
-          if (b !== 0) return;
-          handleMouseEnter(e as unknown as React.MouseEvent<HTMLAnchorElement>);
-        }}
-        onPointerLeave={(e) => {
-          console.debug("[LWP] onPointerLeave");
-          handleMouseLeave(e as unknown as React.MouseEvent<HTMLAnchorElement>);
-        }}
         onFocus={handleFocus}
         onBlur={handleBlur}
         onKeyDown={handleKeyDown}
@@ -451,6 +411,9 @@ export const LinkWithPreview: React.FC<LinkWithPreviewProps> = ({
         aria-haspopup="dialog"
         aria-expanded={open || undefined}
         className={className}
+        // Ensure the link is focusable and receives events
+        tabIndex={0}
+        style={{ pointerEvents: "auto", position: "relative", zIndex: 1 }}
       >
         {children ?? href}
       </a>
