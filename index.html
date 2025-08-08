@@ -6,11 +6,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <title>Kick Link Crawler</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; img-src 'self' https: data: blob:; font-src 'self' https://fonts.gstatic.com data:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; script-src 'self' https://cdn.tailwindcss.com 'nonce-app-csp'; connect-src 'self' https:;" />
+    <script src="https://cdn.tailwindcss.com" nonce="app-csp"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
-    <script>
+    <script nonce="app-csp">
       tailwind.config = {
         theme: {
           extend: {
@@ -152,25 +153,12 @@
         border-radius: var(--radius-4);
       }
     </style>
-  <script type="importmap">
-{
-  "imports": {
-    "lucide-react": "https://esm.sh/lucide-react@^0.525.0",
-    "react-dom/": "https://esm.sh/react-dom@^19.1.0/",
-    "react/": "https://esm.sh/react@^19.1.0/",
-    "react": "https://esm.sh/react@^19.1.0"
-  }
-}
-</script>
 <link rel="stylesheet" href="/index.css">
 </head>
   <body>
     <!-- Scaled app wrapper to emulate browser zoom-out without altering font sizes -->
     <!-- Remove transform wrapper; rely on CSS zoom -->
     <div id="root"></div>
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/lucide-react@0.378.0/dist/lucide-react.umd.min.js"></script>
   <script type="module" src="/index.tsx"></script>
 </body>
 </html>
