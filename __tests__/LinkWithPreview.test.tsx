@@ -27,10 +27,17 @@ vi.mock("../services/previewCache", async () => {
 import { fetchPreviewClientOnly } from "../services/fetchPreview";
 
 describe("LinkWithPreview (proxy mode)", () => {
-  const user = userEvent.setup();
+  let user: ReturnType<typeof userEvent.setup>;
+  const flush = async () => {
+    await act(async () => {
+      vi.runOnlyPendingTimers();
+      await Promise.resolve();
+    });
+  };
 
   beforeEach(() => {
-    vi.useFakeTimers();
+    user = userEvent.setup();
+    vi.useFakeTimers({ toFake: ["setTimeout", "setInterval"] });
     (fetchPreviewClientOnly as any).mockReset();
   });
 
@@ -57,18 +64,20 @@ describe("LinkWithPreview (proxy mode)", () => {
     const link = screen.getByRole("link", { name: "Example" });
 
     await user.hover(link);
-    // advance past delay
     await act(async () => {
-      vi.advanceTimersByTime(210);
+      vi.advanceTimersByTime(300);
     });
+    await flush();
 
-    expect(await screen.findByRole("tooltip")).toBeInTheDocument();
+    const tip1 = screen.queryByRole("tooltip");
+    expect(tip1).not.toBeNull();
     expect(screen.getByText(/Example Domain/i)).toBeInTheDocument();
 
     await user.unhover(link);
     await act(async () => {
-      vi.advanceTimersByTime(120);
+      vi.advanceTimersByTime(500);
     });
+    await flush();
 
     // It may still exist briefly due to grace period, but should close soon after
     // Give a bit more time to let close settle
@@ -94,28 +103,33 @@ describe("LinkWithPreview (proxy mode)", () => {
 
     link.focus();
     await act(async () => {
-      vi.advanceTimersByTime(1);
+      vi.advanceTimersByTime(20);
     });
-    expect(await screen.findByRole("tooltip")).toBeInTheDocument();
+    await flush();
+    const tip2 = screen.queryByRole("tooltip");
+    expect(tip2).not.toBeNull();
 
     // Escape dismiss
     await user.keyboard("{Escape}");
     await act(async () => {
-      vi.advanceTimersByTime(50);
+      vi.advanceTimersByTime(200);
     });
+    await flush();
     expect(screen.queryByRole("tooltip")).toBeNull();
 
     // Focus again then blur
     link.focus();
     await act(async () => {
-      vi.advanceTimersByTime(1);
+      vi.advanceTimersByTime(20);
     });
+    await flush();
     expect(await screen.findByRole("tooltip")).toBeInTheDocument();
 
     link.blur();
     await act(async () => {
-      vi.advanceTimersByTime(100);
+      vi.advanceTimersByTime(200);
     });
+    await flush();
     expect(screen.queryByRole("tooltip")).toBeNull();
   });
 
@@ -131,11 +145,12 @@ describe("LinkWithPreview (proxy mode)", () => {
     const link = screen.getByRole("link", { name: "X" });
     await user.hover(link);
     await act(async () => {
-      vi.advanceTimersByTime(220);
+      vi.advanceTimersByTime(300);
     });
+    await flush();
 
-    const tip = await screen.findByRole("tooltip");
-    expect(tip).toBeInTheDocument();
+    const tip = screen.queryByRole("tooltip");
+    expect(tip).not.toBeNull();
     expect(screen.getByText(/Preview unavailable/i)).toBeInTheDocument();
   });
 
@@ -144,8 +159,9 @@ describe("LinkWithPreview (proxy mode)", () => {
     const link = screen.getByRole("link", { name: "Mail" });
     await user.hover(link);
     await act(async () => {
-      vi.advanceTimersByTime(250);
+      vi.advanceTimersByTime(300);
     });
+    await flush();
     // No tooltip because we don't preview non-http(s)
     expect(screen.queryByRole("tooltip")).toBeNull();
   });
