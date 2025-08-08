@@ -36,7 +36,7 @@ A powerful and feature-rich tool designed to crawl, manage, and organize links f
 
 1.  **Clone the repository:**
     ```bash
-    git clone <repository-url>
+    git clone https://github.com/aguvener/linkcrawler.git
     ```
 2.  **Navigate to the project directory:**
     ```bash
