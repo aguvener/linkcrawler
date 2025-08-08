@@ -9,8 +9,43 @@ const API_ENDPOINT = "/api/link-preview";
 
 function sanitizeText(v: unknown): string | undefined {
   if (typeof v !== "string") return undefined;
-  // Strip any potential markup; do not trust remote HTML
-  return v.replace(/<[^>]*>/g, "").trim().slice(0, 2000) || undefined;
+  // Robust text sanitizer: normalize, decode entities once, then escape all HTML
+  // 1) Unicode normalization to NFKC to collapse multi-codepoint forms
+  let s: string = (typeof (v as any).normalize === "function") ? (v as string).normalize("NFKC") : (v as string);
+  // 2) Decode common HTML entities once (limited safe set)
+  const entityMap: Record<string, string> = {
+    amp: "&",
+    lt: "<",
+    gt: ">",
+    quot: "\"",
+    apos: "'",
+  };
+  s = s.replace(/&(#(?:\d+)|#x(?:[0-9a-fA-F]+)|[a-zA-Z][a-zA-Z0-9]+);/g, (_m, g1: string) => {
+    if (!g1) return _m;
+    if (g1[0] === "#") {
+      try {
+        const isHex = g1[1]?.toLowerCase() === "x";
+        const num = isHex ? parseInt(g1.slice(2), 16) : parseInt(g1.slice(1), 10);
+        if (!Number.isFinite(num) || num < 0) return _m;
+        return String.fromCodePoint(num);
+      } catch {
+        return _m;
+      }
+    }
+    const key = g1.toLowerCase();
+    return Object.prototype.hasOwnProperty.call(entityMap, key) ? entityMap[key] : _m;
+  });
+  // 3) Escape all HTML special chars so no markup can survive
+  // Order matters: escape ampersand first to avoid double-encoding
+  s = s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+  // Trim and bound length
+  s = s.trim().slice(0, 2000);
+  return s || undefined;
 }
 
 function sanitizeUrl(u: unknown): string | undefined {

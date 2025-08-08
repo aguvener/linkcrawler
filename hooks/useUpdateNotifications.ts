@@ -20,8 +20,11 @@ export function useUpdateNotifications(opts: UpdateNotifyOptions) {
     allowPrereleaseIfFromPrerelease = true,
   } = opts;
 
-  // DEBUG: Log the options being passed to the controller
-  console.log('DEBUG: useUpdateNotifications options:', opts);
+  // DEBUG: Log the options being passed to the controller (dev only)
+  if (typeof process !== 'undefined' && process.env && process.env.NODE_ENV !== 'production') {
+    // eslint-disable-next-line no-console
+    console.log('DEBUG: useUpdateNotifications options:', opts);
+  }
 
   const [isOpen, setIsOpen] = useState(false);
   const [html, setHtml] = useState<string>('');
