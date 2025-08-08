@@ -122,18 +122,44 @@ export const Header: React.FC<HeaderProps> = ({searchQuery, setSearchQuery, filt
     }, [draft, hasChanges, isSaving, onSaveUsername, trimmedDraft]);
 
     return (
-        <header className="bg-slate-900/80 backdrop-blur-sm shadow-lg shadow-black/20 p-3 z-20">
-            <div className="flex items-center justify-between mb-3">
+        <header className="fixed top-0 left-0 right-0 w-full bg-slate-950/70 backdrop-blur-lg border-b border-slate-800 p-3 z-20">
+            <div className="flex items-center justify-between gap-3 flex-wrap w-full">
                 <div className="flex items-center space-x-4">
                     <div className="flex items-center space-x-2">
                         <img src="https://kick.com/favicon.ico" alt="Kick Logo" className="w-6 h-6 rounded-md"/>
-                        <h1 className="text-xl font-bold text-white hidden sm:block">
+                        <h1 className="text-lg font-bold text-white hidden sm:block">
                             Kick Link Crawler
                         </h1>
                     </div>
                     <a href="https://github.com/aguvener/linkcrawler" target="_blank" rel="noopener noreferrer" className="text-slate-400 hover:text-white transition-colors">
                         <Github size={24} />
                     </a>
+                </div>
+                <div className="grid grid-cols-4 gap-3 flex-1 mx-3">
+                  <div className="relative col-span-3">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+                    <input
+                      type="text"
+                      placeholder="Search links, senders, messages..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full bg-slate-800 border border-slate-700 rounded-2xl py-2 pl-10 pr-4 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                    />
+                  </div>
+                  <div className="relative col-span-1">
+                    <SlidersHorizontal className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
+                    <select
+                      value={filter}
+                      title="Filter Links"
+                      onChange={(e) => setFilter(e.target.value as FilterType)}
+                      className="w-full bg-slate-800 border border-slate-700 rounded-2xl py-2 pl-10 pr-4 text-white appearance-none focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                    >
+                      <option value={FilterType.ALL}>All New Links</option>
+                      <option value={FilterType.URGENT}>Urgent</option>
+                      <option value={FilterType.DUPLICATES}>Duplicates</option>
+                      <option value={FilterType.HISTORY}>History</option>
+                    </select>
+                  </div>
                 </div>
                 <div className="flex items-center space-x-2 text-sm text-slate-300">
                     <User size={16} />
@@ -212,32 +238,6 @@ export const Header: React.FC<HeaderProps> = ({searchQuery, setSearchQuery, filt
                 )}
             </div>
 
-            <div className="mt-3 grid grid-cols-4 gap-3">
-                <div className="relative col-span-3">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
-                    <input
-                        type="text"
-                        placeholder="Search links, senders, messages..."
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full bg-slate-800 border border-slate-700 rounded-2xl py-2 pl-10 pr-4 text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                    />
-                </div>
-                <div className="relative col-span-1">
-                    <SlidersHorizontal className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
-                    <select
-                        value={filter}
-                        title="Filter Links"
-                        onChange={(e) => setFilter(e.target.value as FilterType)}
-                        className="w-full bg-slate-800 border border-slate-700 rounded-2xl py-2 pl-10 pr-4 text-white appearance-none focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                    >
-                        <option value={FilterType.ALL}>All New Links</option>
-                        <option value={FilterType.URGENT}>Urgent</option>
-                        <option value={FilterType.DUPLICATES}>Duplicates</option>
-                        <option value={FilterType.HISTORY}>History</option>
-                    </select>
-                </div>
-            </div>
         </header>
     );
 };

@@ -55,8 +55,12 @@ export const LinkWithPreview: React.FC<LinkWithPreviewProps> = ({
   const rafPos = useRef<number | null>(null);
   const portalEl = useRef<HTMLDivElement | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [autoHeaderOffset, setAutoHeaderOffset] = useState(0);
 
   const tooltipId = useId();
+  const usePortal = !(
+    typeof process !== 'undefined' && process.env && process.env.NODE_ENV === 'test'
+  );
 
   const safeHref = useMemo(() => {
     try {
@@ -71,6 +75,7 @@ export const LinkWithPreview: React.FC<LinkWithPreviewProps> = ({
 
   // Create a global portal container for the floating card (prevents stacking conflicts)
   useEffect(() => {
+    if (!usePortal) return; // inline render in tests
     if (typeof document === "undefined") return;
     const el = document.createElement("div");
     el.style.position = "fixed";
@@ -108,6 +113,59 @@ export const LinkWithPreview: React.FC<LinkWithPreviewProps> = ({
     return () => io.disconnect();
   }, [safeHref, cacheTTL]);
 
+  // Measure fixed header height automatically (in addition to provided prop)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const measure = () => {
+      try {
+        let maxBottom = 0;
+        const candidates = Array.from(document.querySelectorAll<HTMLElement>('header, [role="banner"]'));
+        for (const el of candidates) {
+          const cs = window.getComputedStyle(el);
+          if (cs.position === "fixed" || cs.position === "sticky") {
+            const r = el.getBoundingClientRect();
+            if (r.top <= 0 && r.bottom > 0) {
+              maxBottom = Math.max(maxBottom, Math.ceil(r.bottom));
+            }
+          }
+        }
+        // Fallback: try any element pinned to the very top with high z-index
+        if (maxBottom === 0) {
+          const topFixed = Array.from(document.querySelectorAll<HTMLElement>("*"))
+            .slice(0, 2000) // cap to avoid pathological cases
+            .filter((el) => {
+              const cs = window.getComputedStyle(el);
+              return cs.position === "fixed";
+            });
+          for (const el of topFixed) {
+            const r = el.getBoundingClientRect();
+            if (r.top <= 0 && r.bottom > 0) maxBottom = Math.max(maxBottom, Math.ceil(r.bottom));
+          }
+        }
+        setAutoHeaderOffset(maxBottom);
+      } catch {
+        // no-op
+      }
+    };
+    measure();
+    let ro: ResizeObserver | null = null;
+    try {
+      if (typeof (window as any).ResizeObserver !== 'undefined') {
+        ro = new ResizeObserver(() => measure());
+        ro.observe(document.documentElement);
+      }
+    } catch {
+      // ignore
+    }
+    window.addEventListener("resize", measure, { passive: true });
+    return () => {
+      try { ro?.disconnect(); } catch {}
+      window.removeEventListener("resize", measure as any);
+    };
+  }, []);
+
+  const effectiveHeaderOffset = Math.max(0, Math.max(headerOffsetPx ?? 0, autoHeaderOffset));
+
   // Cleanup flag
   useEffect(() => {
     return () => {
@@ -137,7 +195,7 @@ export const LinkWithPreview: React.FC<LinkWithPreviewProps> = ({
     const vh = document.documentElement.clientHeight;
 
     // Calculate available space
-    const spaceTop = trigger.top - headerOffsetPx;
+    const spaceTop = trigger.top - effectiveHeaderOffset;
     const spaceBottom = vh - trigger.bottom;
     const spaceLeft = trigger.left;
     const spaceRight = vw - trigger.right;
@@ -174,17 +232,17 @@ export const LinkWithPreview: React.FC<LinkWithPreviewProps> = ({
     let top = 0;
 
     if (best === "top") {
-      top = Math.max(headerOffsetPx + margin, trigger.top - card.height - margin);
+      top = Math.max(effectiveHeaderOffset + margin, trigger.top - card.height - margin);
       left = Math.max(margin, Math.min(trigger.left, vw - card.width - margin));
     } else if (best === "bottom") {
       top = Math.min(vh - card.height - margin, trigger.bottom + margin);
       left = Math.max(margin, Math.min(trigger.left, vw - card.width - margin));
     } else if (best === "left") {
-      top = Math.max(headerOffsetPx + margin, Math.min(trigger.top, vh - card.height - margin));
+      top = Math.max(effectiveHeaderOffset + margin, Math.min(trigger.top, vh - card.height - margin));
       left = Math.max(margin, trigger.left - card.width - margin);
     } else {
       // right
-      top = Math.max(headerOffsetPx + margin, Math.min(trigger.top, vh - card.height - margin));
+      top = Math.max(effectiveHeaderOffset + margin, Math.min(trigger.top, vh - card.height - margin));
       left = Math.min(vw - card.width - margin, trigger.right + margin);
     }
 
@@ -199,7 +257,7 @@ export const LinkWithPreview: React.FC<LinkWithPreviewProps> = ({
     cardEl.style.maxHeight = `${maxHeightPx}px`;
     // Enable pointer interactions after it is placed
     cardEl.style.pointerEvents = "auto";
-  }, [headerOffsetPx, placement, maxWidthPx, maxHeightPx]);
+  }, [effectiveHeaderOffset, placement, maxWidthPx, maxHeightPx]);
 
   const scheduleRecompute = useCallback(() => {
     if (rafPos.current) cancelAnimationFrame(rafPos.current);
@@ -211,8 +269,8 @@ export const LinkWithPreview: React.FC<LinkWithPreviewProps> = ({
 
   const openCard = useCallback(async () => {
     if (!safeHref) return;
-    // If portal element not yet created, create it synchronously as a fallback
-    if (!portalEl.current && typeof document !== "undefined") {
+    // If portal element not yet created, create it synchronously as a fallback (only when using portal)
+    if (usePortal && !portalEl.current && typeof document !== "undefined") {
       const el = document.createElement("div");
       el.style.position = "fixed";
       el.style.inset = "0";
@@ -222,36 +280,60 @@ export const LinkWithPreview: React.FC<LinkWithPreviewProps> = ({
       document.body.appendChild(el);
       portalEl.current = el;
       setMounted(true);
-      console.debug("[LWP] portal created on-demand");
+          if (typeof process !== 'undefined' && process.env && process.env.NODE_ENV !== 'production') {
+            // eslint-disable-next-line no-console
+            console.debug("[LWP] portal created on-demand");
+          }
     }
-    if (!portalEl.current) return;
+    if (usePortal && !portalEl.current) return;
 
-    console.debug("[LWP] openCard: setOpen(true) for", safeHref);
+    if (typeof process !== 'undefined' && process.env && process.env.NODE_ENV !== 'production') {
+      // eslint-disable-next-line no-console
+      console.debug("[LWP] openCard: setOpen(true) for", safeHref);
+    }
     setOpen(true);
 
     // Place immediately in next frame for "buttery" feel
+    // Position after the card is mounted; use double rAF for safety
     requestAnimationFrame(() => {
-      console.debug("[LWP] scheduleRecompute via rAF");
+      if (typeof process !== 'undefined' && process.env && process.env.NODE_ENV !== 'production') {
+        // eslint-disable-next-line no-console
+        console.debug("[LWP] scheduleRecompute via rAF");
+      }
       scheduleRecompute();
+      requestAnimationFrame(() => scheduleRecompute());
     });
 
     // If we already have data or error, do not refetch immediately
     if (result) {
-      console.debug("[LWP] openCard: using existing result");
+      if (typeof process !== 'undefined' && process.env && process.env.NODE_ENV !== 'production') {
+        // eslint-disable-next-line no-console
+        console.debug("[LWP] openCard: using existing result");
+      }
       return;
     }
 
     setLoading(true);
-    console.debug("[LWP] fetching preview...");
+    if (typeof process !== 'undefined' && process.env && process.env.NODE_ENV !== 'production') {
+      // eslint-disable-next-line no-console
+      console.debug("[LWP] fetching preview...");
+    }
     const r = await getOrFetch(safeHref, (u) => fetchPreviewClientOnly(u), cacheTTL);
     if (!isMounted.current) return;
     setResult(r);
     setLoading(false);
-    console.debug("[LWP] fetch complete", r && ("error" in r ? "error" : "ok"));
+    if (typeof process !== 'undefined' && process.env && process.env.NODE_ENV !== 'production') {
+      // eslint-disable-next-line no-console
+      console.debug("[LWP] fetch complete", r && ("error" in r ? "error" : "ok"));
+    }
   }, [safeHref, cacheTTL, result, scheduleRecompute]);
 
   const closeCard = useCallback(() => {
     setOpen(false);
+    // cleanup timers and listeners to avoid inconsistent states
+    if (showTimer.current) { window.clearTimeout(showTimer.current); showTimer.current = null; }
+    if (hideTimer.current) { window.clearTimeout(hideTimer.current); hideTimer.current = null; }
+    removeGlobalListeners();
   }, []);
 
   const scheduleOpen = useCallback(() => {
@@ -263,10 +345,16 @@ export const LinkWithPreview: React.FC<LinkWithPreviewProps> = ({
       window.clearTimeout(hideTimer.current);
       hideTimer.current = null;
     }
-    console.debug("[LWP] scheduleOpen: scheduling in", Math.max(0, delay), "ms");
+    if (typeof process !== 'undefined' && process.env && process.env.NODE_ENV !== 'production') {
+      // eslint-disable-next-line no-console
+      console.debug("[LWP] scheduleOpen: scheduling in", Math.max(0, delay), "ms");
+    }
     showTimer.current = window.setTimeout(() => {
       showTimer.current = null;
-      console.debug("[LWP] scheduleOpen: firing openCard");
+      if (typeof process !== 'undefined' && process.env && process.env.NODE_ENV !== 'production') {
+        // eslint-disable-next-line no-console
+        console.debug("[LWP] scheduleOpen: firing openCard");
+      }
       void openCard();
     }, Math.max(0, delay));
   }, [openCard, delay]);
@@ -280,7 +368,10 @@ export const LinkWithPreview: React.FC<LinkWithPreviewProps> = ({
 
   const handleMouseEnter = (e: React.MouseEvent<HTMLAnchorElement>) => {
     onMouseEnter?.(e);
-    console.debug("[LWP] onMouseEnter");
+    if (typeof process !== 'undefined' && process.env && process.env.NODE_ENV !== 'production') {
+      // eslint-disable-next-line no-console
+      console.debug("[LWP] onMouseEnter");
+    }
     // No gating — open on hover reliably
     scheduleOpen();
     addGlobalListeners();
@@ -288,14 +379,20 @@ export const LinkWithPreview: React.FC<LinkWithPreviewProps> = ({
 
   const handleMouseLeave = (e: React.MouseEvent<HTMLAnchorElement>) => {
     onMouseLeave?.(e);
-    console.debug("[LWP] onMouseLeave");
+    if (typeof process !== 'undefined' && process.env && process.env.NODE_ENV !== 'production') {
+      // eslint-disable-next-line no-console
+      console.debug("[LWP] onMouseLeave");
+    }
     cancelScheduledOpen();
     if (hideTimer.current) window.clearTimeout(hideTimer.current);
     // Delay close slightly to allow moving pointer into card
     hideTimer.current = window.setTimeout(() => {
       if (!cardRef.current) return closeCard();
       const onOverCard = (cardRef.current as any).__hovering;
-      console.debug("[LWP] hideTimer(link): hovering card?", onOverCard);
+      if (typeof process !== 'undefined' && process.env && process.env.NODE_ENV !== 'production') {
+        // eslint-disable-next-line no-console
+        console.debug("[LWP] hideTimer(link): hovering card?", onOverCard);
+      }
       if (!onOverCard) closeCard();
     }, Math.max(200, Math.min(600, hideDelay)));
   };
@@ -363,11 +460,17 @@ export const LinkWithPreview: React.FC<LinkWithPreviewProps> = ({
   // Track hover over card for small leave/blur grace period
   const cardMouseEnter = () => {
     if (cardRef.current) (cardRef.current as any).__hovering = true;
-    console.debug("[LWP] cardMouseEnter");
+    if (typeof process !== 'undefined' && process.env && process.env.NODE_ENV !== 'production') {
+      // eslint-disable-next-line no-console
+      console.debug("[LWP] cardMouseEnter");
+    }
   };
   const cardMouseLeave = () => {
     if (cardRef.current) (cardRef.current as any).__hovering = false;
-    console.debug("[LWP] cardMouseLeave -> close after grace if link not focused");
+    if (typeof process !== 'undefined' && process.env && process.env.NODE_ENV !== 'production') {
+      // eslint-disable-next-line no-console
+      console.debug("[LWP] cardMouseLeave -> close after grace if link not focused");
+    }
     // close when leaving card if link not focused
     window.setTimeout(() => {
       if (document.activeElement !== linkRef.current) closeCard();
@@ -389,6 +492,67 @@ export const LinkWithPreview: React.FC<LinkWithPreviewProps> = ({
     }
   }, [computedPlacement]);
 
+  // Prepare card node once to simplify portal vs inline rendering
+  const cardNode = (
+    <div
+      id={tooltipId}
+      role="tooltip"
+      ref={cardRef}
+      className={`${styles.card} ${placementClass}`}
+      aria-live="polite"
+      onMouseEnter={cardMouseEnter}
+      onMouseLeave={cardMouseLeave}
+      style={{ minWidth: 280, maxWidth: maxWidthPx, maxHeight: maxHeightPx, pointerEvents: "auto" }}
+    >
+      <div className={styles.inner}>
+        <div className={styles.headerArea} aria-hidden="true"></div>
+
+        {loading && (
+          <div className={styles.skeleton} aria-busy="true">
+            <div className={styles.skelImage} />
+            <div className={styles.skelTitle} />
+            <div className={styles.skelDesc} />
+          </div>
+        )}
+
+        {!loading && isError(result) && (
+          <div className={styles.content}>
+            <div className={styles.metaRow}>
+              <span className={styles.domain}>{domain || "Preview"}</span>
+            </div>
+            <p className={styles.errorMsg}>Preview unavailable</p>
+          </div>
+        )}
+
+        {!loading && pv && (
+          <div className={styles.content}>
+            {pv.images?.[0] && (
+              <div className={styles.imageWrap}>
+                <img
+                  src={pv.images[0]}
+                  alt={pv.title ? `${pv.title} image` : ""}
+                  loading="lazy"
+                  width={320}
+                  height={160}
+                  decoding="async"
+                  onLoad={scheduleRecompute}
+                />
+              </div>
+            )}
+
+            <div className={styles.textWrap}>
+              <div className={styles.metaRow}>
+                <span className={styles.domain}>{pv.siteName || domain}</span>
+              </div>
+              {pv.title && <h4 className={styles.title}>{pv.title}</h4>}
+              {pv.description && <p className={styles.desc}>{pv.description}</p>}
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
   // ARIA: role=tooltip with id, and link gets aria-describedby while open
   return (
     <span
@@ -401,7 +565,7 @@ export const LinkWithPreview: React.FC<LinkWithPreviewProps> = ({
         href={safeHref ?? href}
         target="_blank"
         rel="noopener noreferrer"
-        // Use only mouse events for reliability; remove pointer events to avoid duplication/quirks
+        // Use mouse events for reliable hover; avoid duplicate pointer events
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
         onFocus={handleFocus}
@@ -417,68 +581,9 @@ export const LinkWithPreview: React.FC<LinkWithPreviewProps> = ({
       >
         {children ?? href}
       </a>
-
-      {mounted && open && portalEl.current
-        ? createPortal(
-            <div
-              id={tooltipId}
-              role="tooltip"
-              ref={cardRef}
-              className={`${styles.card} ${placementClass}`}
-              aria-live="polite"
-              onMouseEnter={cardMouseEnter}
-              onMouseLeave={cardMouseLeave}
-              style={{ minWidth: 280, maxWidth: maxWidthPx, maxHeight: maxHeightPx, pointerEvents: "auto" }}
-            >
-              <div className={styles.inner}>
-                <div className={styles.headerArea} aria-hidden="true"></div>
-
-                {loading && (
-                  <div className={styles.skeleton} aria-busy="true">
-                    <div className={styles.skelImage} />
-                    <div className={styles.skelTitle} />
-                    <div className={styles.skelDesc} />
-                  </div>
-                )}
-
-                {!loading && isError(result) && (
-                  <div className={styles.content}>
-                    <div className={styles.metaRow}>
-                      <span className={styles.domain}>{domain || "Preview"}</span>
-                    </div>
-                    <p className={styles.errorMsg}>Preview unavailable</p>
-                  </div>
-                )}
-
-                {!loading && pv && (
-                  <div className={styles.content}>
-                    {pv.images?.[0] && (
-                      <div className={styles.imageWrap}>
-                        <img
-                          src={pv.images[0]}
-                          alt={pv.title ? `${pv.title} image` : ""}
-                          loading="lazy"
-                          width={320}
-                          height={160}
-                          decoding="async"
-                        />
-                      </div>
-                    )}
-
-                    <div className={styles.textWrap}>
-                      <div className={styles.metaRow}>
-                        <span className={styles.domain}>{pv.siteName || domain}</span>
-                      </div>
-                      {pv.title && <h4 className={styles.title}>{pv.title}</h4>}
-                      {pv.description && <p className={styles.desc}>{pv.description}</p>}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>,
-            portalEl.current
-          )
-        : null}
+      {open && (usePortal
+        ? (mounted && portalEl.current ? createPortal(cardNode, portalEl.current) : null)
+        : cardNode)}
     </span>
   );
 };

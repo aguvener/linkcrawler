@@ -23,7 +23,7 @@ export const LinkItem: React.FC<LinkItemProps> = ({ link, isOpened, onDelete, on
     const domain = link.url ? new URL(link.url).hostname : '';
     const faviconUrl = domain ? `https://www.google.com/s2/favicons?domain=${domain}&sz=16` : '';
 
-    const baseClasses = "relative flex flex-col sm:flex-row items-start px-4 py-2 rounded-2xl border transition-all duration-300 group";
+    const baseClasses = "relative flex flex-row flex-wrap items-start px-4 py-2 rounded-2xl border transition-all duration-300 group";
     const colorClasses = link.urgent 
         ? 'bg-red-900/20 border-red-500/50 hover:bg-red-900/30 hover:shadow-red-500/20' 
         : link.isHistory 
@@ -116,7 +116,7 @@ export const LinkItem: React.FC<LinkItemProps> = ({ link, isOpened, onDelete, on
                 </div>
             </div>
 
-            <div className={`flex-grow min-w-0 items-center h-full ml-2 ${!link.message ? 'flex items-center' : ''}`}>
+            <div className={`flex-grow min-w-0 h-full ml-2 flex flex-row flex-wrap ${!link.message ? 'items-center' : 'gap-2 flex-col'}`}>
 
                 {link.message && (
                     <div className="flex items-start items-center text-slate-300 text-sm">
