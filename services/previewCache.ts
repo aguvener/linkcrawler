@@ -29,6 +29,73 @@ type CacheEntry = {
 const cache = new Map<string, CacheEntry>();
 const inflight = new Map<string, Promise<PreviewResult>>();
 
+// IndexedDB-backed persistence for warm reloads
+type IDBRecord = {
+  value: PreviewResult;
+  expiresAt: number;
+};
+
+const IDB_DB_NAME = 'linkcrawler';
+const IDB_STORE = 'previewCache';
+let idbReady: Promise<IDBDatabase | null> | null = null;
+
+function openIDB(): Promise<IDBDatabase | null> {
+  if (idbReady) return idbReady;
+  if (!isClient() || !('indexedDB' in window)) {
+    idbReady = Promise.resolve(null);
+    return idbReady;
+  }
+  idbReady = new Promise((resolve) => {
+    try {
+      const req = indexedDB.open(IDB_DB_NAME, 1);
+      req.onupgradeneeded = () => {
+        const db = req.result;
+        if (!db.objectStoreNames.contains(IDB_STORE)) {
+          db.createObjectStore(IDB_STORE);
+        }
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => resolve(null);
+      req.onblocked = () => resolve(null);
+    } catch {
+      resolve(null);
+    }
+  });
+  return idbReady;
+}
+
+async function idbGet(keyStr: string): Promise<IDBRecord | null> {
+  const db = await openIDB();
+  if (!db) return null;
+  return new Promise((resolve) => {
+    try {
+      const tx = db.transaction(IDB_STORE, 'readonly');
+      const store = tx.objectStore(IDB_STORE);
+      const req = store.get(keyStr);
+      req.onsuccess = () => resolve((req.result as IDBRecord) ?? null);
+      req.onerror = () => resolve(null);
+    } catch {
+      resolve(null);
+    }
+  });
+}
+
+async function idbSet(keyStr: string, rec: IDBRecord): Promise<void> {
+  const db = await openIDB();
+  if (!db) return;
+  return new Promise((resolve) => {
+    try {
+      const tx = db.transaction(IDB_STORE, 'readwrite');
+      const store = tx.objectStore(IDB_STORE);
+      const req = store.put(rec, keyStr);
+      req.onsuccess = () => resolve();
+      req.onerror = () => resolve();
+    } catch {
+      resolve();
+    }
+  });
+}
+
 /**
  * Check if running in a browser environment
  */
@@ -63,12 +130,26 @@ export function get(url: string): PreviewResult | undefined {
   return entry.value;
 }
 
+async function getFromPersistent(url: string): Promise<PreviewResult | undefined> {
+  const k = key(url);
+  const rec = await idbGet(k);
+  if (!rec) return undefined;
+  if (Date.now() > rec.expiresAt) return undefined;
+  // populate memory cache
+  cache.set(k, rec);
+  return rec.value;
+}
+
 /**
  * Set a cache entry with TTL (ms)
  */
 export function set(url: string, value: PreviewResult, ttlMs: number): void {
   const k = key(url);
-  cache.set(k, { value, expiresAt: Date.now() + Math.max(0, ttlMs) });
+  const expiresAt = Date.now() + Math.max(0, ttlMs);
+  const rec: CacheEntry = { value, expiresAt };
+  cache.set(k, rec);
+  // fire-and-forget persistence
+  void idbSet(k, rec);
 }
 
 /**
@@ -96,6 +177,10 @@ export async function getOrFetch(
 
   const cached = get(k);
   if (cached) return cached;
+
+  // Try persistent cache asynchronously
+  const fromIDB = await getFromPersistent(k);
+  if (fromIDB) return fromIDB;
 
   if (inflight.has(k)) {
     return inflight.get(k)!;

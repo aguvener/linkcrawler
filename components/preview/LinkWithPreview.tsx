@@ -19,6 +19,26 @@ export interface LinkWithPreviewProps extends React.AnchorHTMLAttributes<HTMLAnc
   maxHeightPx?: number; // max height for card
 }
 
+// Preconnect utility to reduce connection latency for soon-to-be-requested origins
+const preconnected = new Set<string>();
+function ensurePreconnect(url: string) {
+  try {
+    const u = new URL(url);
+    if (!/^https:$/i.test(u.protocol)) return; // only preconnect https
+    const origin = u.origin;
+    if (preconnected.has(origin)) return;
+    preconnected.add(origin);
+    if (typeof document === 'undefined') return;
+    const link = document.createElement('link');
+    link.rel = 'preconnect';
+    link.href = origin;
+    link.crossOrigin = '';
+    document.head.appendChild(link);
+  } catch {
+    // ignore
+  }
+}
+
 /**
  * Accessible, client-only link preview. Shows on hover/focus with debounce,
  * hides on leave/blur/scroll/Escape. Prefetches when link enters viewport.
@@ -102,6 +122,7 @@ export const LinkWithPreview: React.FC<LinkWithPreviewProps> = ({
       for (const e of entries) {
         if (e.isIntersecting) {
           // fire and forget prefetch with short debounce
+          ensurePreconnect(safeHref);
           void getOrFetch(safeHref, (u) => fetchPreviewClientOnly(u), cacheTTL);
           io.disconnect();
           break;
@@ -345,6 +366,7 @@ export const LinkWithPreview: React.FC<LinkWithPreviewProps> = ({
       window.clearTimeout(hideTimer.current);
       hideTimer.current = null;
     }
+    if (safeHref) ensurePreconnect(safeHref);
     if (typeof process !== 'undefined' && process.env && process.env.NODE_ENV !== 'production') {
       // eslint-disable-next-line no-console
       console.debug("[LWP] scheduleOpen: scheduling in", Math.max(0, delay), "ms");
@@ -357,7 +379,7 @@ export const LinkWithPreview: React.FC<LinkWithPreviewProps> = ({
       }
       void openCard();
     }, Math.max(0, delay));
-  }, [openCard, delay]);
+  }, [openCard, delay, safeHref]);
 
   const cancelScheduledOpen = useCallback(() => {
     if (showTimer.current) {
