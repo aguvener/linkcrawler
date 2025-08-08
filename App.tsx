@@ -47,8 +47,8 @@ const App: React.FC = () => {
     const [isBatchOpenModalOpen, setIsBatchOpenModalOpen] = useState(false);
 
     // Update notifications integration
-    // Define the current app version here; update when you release.
-    const APP_VERSION = '1.3.0';
+    // Version is injected at build via Vite define
+    const APP_VERSION: string = (import.meta as any).env?.VITE_APP_VERSION || '1.3.0';
     const { isOpen: isUpdateOpen, html: updateHtml, close: closeUpdate, acknowledge: acknowledgeUpdate } =
         useUpdateNotifications({
             appVersion: APP_VERSION,
@@ -187,7 +187,8 @@ const App: React.FC = () => {
     
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
-        const userParam = params.get('user') || 'BurakSakinOl';
+        const DEFAULT_USER = (import.meta as any).env?.VITE_DEFAULT_USER || 'BurakSakinOl';
+        const userParam = params.get('user') || DEFAULT_USER;
         
         // Only run this effect once on mount
         if (user) return;

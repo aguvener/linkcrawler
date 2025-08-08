@@ -55,13 +55,24 @@ To start the development server, run:
 npm run dev
 ```
 
-By default, the application will connect to the chat of the user "BurakSakinOl". To connect to a different user's chat, append a query parameter to the URL in your browser:
+By default, the application will connect to the chat of the user configured via the `VITE_DEFAULT_USER` env var (falls back to `BurakSakinOl`). To connect to a different user's chat, append a query parameter to the URL in your browser:
 
 ```
 http://localhost:5173/?user=<username>
 ```
 
 ## Configuration
+
+Environment variables (via `.env` or shell) influence defaults:
+
+- `VITE_DEFAULT_USER`: Default Kick username used on startup when `?user=` is not provided.
+- `VITE_APP_VERSION`: Automatically injected by Vite from `package.json` during build; used by the update notification system.
+
+Example `.env.local`:
+
+```
+VITE_DEFAULT_USER=MyFavoriteStreamer
+```
 
 All configuration is managed through the **Settings** modal within the application.
 
