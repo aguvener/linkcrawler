@@ -68,6 +68,11 @@ interface SettingsModalProps {
     showToast: (message: string, type?: 'success' | 'error' | 'info') => void;
     testMode: boolean;
     setTestMode: React.Dispatch<React.SetStateAction<boolean>>;
+    suggestedTrusted: { username: string; count: number }[];
+    onAddTrustedMany: (users: string[]) => void;
+    suggestionThreshold: number;
+    setSuggestionThreshold: React.Dispatch<React.SetStateAction<number>>;
+    onClearSenderActivity: () => void;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = (props) => {
@@ -142,6 +147,68 @@ export const SettingsModal: React.FC<SettingsModalProps> = (props) => {
                                  onRemoveItem={(item) => props.setTrustedUsers(p => p.filter(i => i !== item))}
                                  placeholder="Enter username to trust..."
                              />
+
+                             {/* Bulk import + suggestions */}
+                             <div className="grid md:grid-cols-2 gap-4">
+                               <div className="bg-slate-900/40 rounded-2xl p-3 border border-slate-800">
+                                 <h4 className="text-slate-200 font-semibold mb-2">Bulk Import Trusted Users</h4>
+                                 <p className="text-slate-400 text-sm mb-2">Paste a list of usernames separated by commas, spaces, or new lines.</p>
+                                 <textarea
+                                   id="bulk-trusted"
+                                   className="w-full h-28 bg-slate-800 border border-slate-700 rounded-xl p-2 text-white placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                                   placeholder="user1, user2 user3\nuser4"
+                                 />
+                                 <div className="mt-2 flex gap-2">
+                                   <Button onClick={() => {
+                                     const ta = document.getElementById('bulk-trusted') as HTMLTextAreaElement | null;
+                                     const raw = ta?.value || '';
+                                     const parts = raw.split(/[\s,;]+/).map(s => s.trim()).filter(Boolean);
+                                     if (parts.length === 0) return;
+                                     props.onAddTrustedMany(parts);
+                                     if (ta) ta.value = '';
+                                   }}>Add Users</Button>
+                                   <Button onClick={props.onClearSenderActivity}>Clear Sender Activity</Button>
+                                 </div>
+                               </div>
+                               <div className="bg-slate-900/40 rounded-2xl p-3 border border-slate-800">
+                                 <h4 className="text-slate-200 font-semibold mb-2">Suggestions from Frequent Contributors</h4>
+                                 <div className="flex items-center justify-between mb-2">
+                                   <label htmlFor="suggestion-threshold" className="text-slate-300 text-sm">Threshold</label>
+                                   <input
+                                     id="suggestion-threshold"
+                                     type="number"
+                                     min={1}
+                                     step={1}
+                                     value={props.suggestionThreshold}
+                                     onChange={(e) => {
+                                       const n = Math.max(1, parseInt(e.target.value || '1', 10));
+                                       props.setSuggestionThreshold(n);
+                                     }}
+                                     className="w-20 bg-slate-800 border border-slate-700 rounded-md py-1 px-2 text-white focus:outline-none focus:ring-1 focus:ring-cyan-500"
+                                   />
+                                 </div>
+                                 {props.suggestedTrusted.length === 0 ? (
+                                   <p className="text-slate-500 text-sm">No suggestions yet. They will appear as the app observes chat activity.</p>
+                                 ) : (
+                                   <div>
+                                     <div className="flex justify-end mb-2">
+                                       <Button onClick={() => props.onAddTrustedMany(props.suggestedTrusted.map(s => s.username))}>Add All</Button>
+                                     </div>
+                                     <ul className="space-y-1">
+                                       {props.suggestedTrusted.map(s => (
+                                         <li key={s.username} className="flex items-center justify-between bg-slate-800 rounded-xl px-2 py-1">
+                                           <span className="text-slate-200">{s.username}</span>
+                                           <div className="flex items-center gap-2 text-sm">
+                                             <span className="text-slate-400">{s.count} link(s)</span>
+                                             <Button onClick={() => props.onAddTrustedMany([s.username])}>Add</Button>
+                                           </div>
+                                         </li>
+                                       ))}
+                                     </ul>
+                                   </div>
+                                 )}
+                               </div>
+                             </div>
                          </div>
                     )}
                     

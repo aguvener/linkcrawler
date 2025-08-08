@@ -13,7 +13,9 @@ export const STORAGE_KEYS = {
     HISTORY: 'kickLinkCrawlerLinkHistory',
     BEEP_THRESHOLD: 'kickLinkCrawlerBeepThreshold',
     TOTAL_MESSAGES: 'kickLinkCrawlerTotalMessages',
-    TEST_MODE: 'kickLinkCrawlerTestMode'
+    TEST_MODE: 'kickLinkCrawlerTestMode',
+    SENDER_COUNTS: 'kickLinkCrawlerSenderCounts',
+    SUGGESTION_THRESHOLD: 'kickLinkCrawlerSuggestionThreshold'
 };
 
 export const DEFAULT_TRUSTED_USERS = ['ses_muhendisi', 'aerloss'];

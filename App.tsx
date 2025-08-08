@@ -39,6 +39,8 @@ const App: React.FC = () => {
 
     const [linkTimeouts, setLinkTimeouts] = useState<Map<string, number>>(new Map());
     const [userTimeouts, setUserTimeouts] = useState<Map<string, number>>(new Map());
+    const [senderCounts, setSenderCounts] = useLocalStorage<Record<string, number>>(STORAGE_KEYS.SENDER_COUNTS, {});
+    const [suggestionThreshold, setSuggestionThreshold] = useLocalStorage<number>(STORAGE_KEYS.SUGGESTION_THRESHOLD, 3);
 
     const [searchQuery, setSearchQuery] = useState('');
     const [filter, setFilter] = useState<FilterType>(FilterType.ALL);
@@ -146,6 +148,9 @@ const App: React.FC = () => {
              };
 
              addLink(newLinkData);
+
+             // Track sender link frequency for suggestions (persisted)
+             setSenderCounts(prev => ({ ...prev, [lowerCaseSender]: (prev[lowerCaseSender] || 0) + 1 }));
 
              if(isUrgent) {
                 audioService.speakText(`${senderUsername} sent an urgent link!`);
@@ -531,6 +536,26 @@ const App: React.FC = () => {
         );
     }, [user, isConnected, isConnecting, error, status, filteredLinks, openedLinks, showToast, handleDeleteLink, handleMarkAsOpened, setBlacklist, setLinkBlacklist, setLinkTimeouts, setUserTimeouts]);
 
+    // Suggested trusted users based on frequent link senders
+    const suggestedTrusted = useMemo(() => {
+        const entries = Object.entries(senderCounts);
+        const filtered = entries
+          .filter(([u, c]) => c >= suggestionThreshold && !trustedUsers.includes(u) && !blacklist.includes(u))
+          .map(([username, count]) => ({ username, count }))
+          .sort((a, b) => b.count - a.count)
+          .slice(0, 10);
+        return filtered;
+    }, [senderCounts, trustedUsers, blacklist, suggestionThreshold]);
+
+    const addTrustedMany = useCallback((users: string[]) => {
+        const cleaned = users.map(u => u.trim().toLowerCase()).filter(Boolean);
+        const before = new Set(trustedUsers);
+        const merged = new Set([...trustedUsers, ...cleaned]);
+        const added = [...merged].filter(u => !before.has(u));
+        setTrustedUsers([...merged]);
+        if (added.length) showToast(`Added ${added.length} trusted user(s).`, 'success');
+    }, [trustedUsers, setTrustedUsers, showToast]);
+
 
     return (
         <div className="min-h-screen" style={{ background: 'var(--color-bg)', color: 'var(--color-text)', fontFamily: 'var(--font-sans)' }}>
@@ -583,6 +608,11 @@ const App: React.FC = () => {
                 showToast={showToast}
                 testMode={testMode}
                 setTestMode={setTestMode}
+                suggestedTrusted={suggestedTrusted}
+                onAddTrustedMany={addTrustedMany}
+                suggestionThreshold={suggestionThreshold}
+                setSuggestionThreshold={setSuggestionThreshold}
+                onClearSenderActivity={() => setSenderCounts({})}
             />
             {/* Update Notification Modal */}
             <UpdateModal
