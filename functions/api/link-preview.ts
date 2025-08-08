@@ -22,24 +22,26 @@ type PreviewData = {
 type ErrorBody = { error: true; message: string; code?: string };
 
 function json(data: unknown, init?: ResponseInit): Response {
-  return new Response(JSON.stringify(data), {
-    headers: {
-      "content-type": "application/json; charset=utf-8",
-      "cache-control": "public, max-age=300",
-      "x-robots-tag": "noindex",
-    },
-    ...init,
+  const headers = new Headers({
+    "content-type": "application/json; charset=utf-8",
+    "cache-control": "public, max-age=300",
+    "x-robots-tag": "noindex",
   });
+  if (init?.headers) {
+    const extra = new Headers(init.headers as HeadersInit);
+    extra.forEach((v, k) => headers.set(k, v));
+  }
+  return new Response(JSON.stringify(data), { ...init, headers });
 }
 
 function badRequest(message: string, code?: string) {
   const body: ErrorBody = { error: true, message, code };
-  return json(body, { status: 400 });
+  return json(body, { status: 400, headers: { "x-error-code": code || "BAD_REQUEST" } });
 }
 
 function serverError(message = "Internal error", code?: string) {
   const body: ErrorBody = { error: true, message, code };
-  return json(body, { status: 500 });
+  return json(body, { status: 500, headers: { "x-error-code": code || "INTERNAL" } });
 }
 
 function sanitizeText(v: unknown): string | undefined {
@@ -118,6 +120,27 @@ export const onRequestGet = async (context: { request: Request; env: Env; params
       } as any);
     }
 
+    // Heuristic: HEAD check for non-HTML to short-circuit
+    const likelyBinaryExt = /\.(?:png|jpe?g|gif|webp|svg|ico|pdf|zip|rar|7z|mp4|mp3|wav|avi|mov)(?:[?#].*)?$/i;
+    const isBinaryByExt = likelyBinaryExt.test(new URL(normalized).pathname);
+    const HEAD_TIMEOUT = 3000;
+    const ctOk = (ct: string | null) => !!ct && /^(text\/html|application\/xhtml\+xml)/i.test(ct);
+    if (isBinaryByExt) {
+      return json({ url: normalized, note: "Non-HTML target" }, { status: 204, headers: { "x-error-code": "UNSUPPORTED_TYPE" } });
+    }
+    try {
+      const ac = new AbortController();
+      const t = setTimeout(() => ac.abort(), HEAD_TIMEOUT);
+      const headRes = await fetch(normalized, { method: "HEAD", redirect: "follow", headers: baseHeaders as any, signal: ac.signal });
+      clearTimeout(t);
+      const ct = headRes.headers.get("content-type");
+      if (ct && !ctOk(ct)) {
+        return json({ url: normalized, note: "Unsupported content-type" }, { status: 204, headers: { "x-error-code": "UNSUPPORTED_TYPE" } });
+      }
+    } catch {
+      // ignore HEAD errors; continue to preview attempts
+    }
+
     // Perform preview fetch (server-side avoids browser CORS)
     let data: any;
     let uaUsed = TWITTERBOT_UA;
@@ -125,10 +148,13 @@ export const onRequestGet = async (context: { request: Request; env: Env; params
     try {
       data = await tryPreview(TWITTERBOT_UA);
     } catch (e1) {
+      // backoff + jitter
+      await new Promise(r => setTimeout(r, 100 + Math.floor(Math.random() * 150)));
       uaUsed = GOOGLEBOT_UA;
       try {
         data = await tryPreview(GOOGLEBOT_UA);
       } catch (e2) {
+        await new Promise(r => setTimeout(r, 150 + Math.floor(Math.random() * 200)));
         uaUsed = CHROME_UA;
         data = await tryPreview(CHROME_UA);
       }
@@ -148,7 +174,7 @@ export const onRequestGet = async (context: { request: Request; env: Env; params
 
     // If nothing useful, respond with 204-like JSON including the UA used to help debugging
     if (!body.title && !body.description && !body.images?.length && !body.siteName) {
-      return json({ ...body, note: "No preview metadata available", userAgentTried: uaUsed }, { status: 204 });
+      return json({ ...body, note: "No preview metadata available", userAgentTried: uaUsed }, { status: 204, headers: { "x-error-code": "EMPTY_PREVIEW" } });
     }
 
     return json(body, { status: 200 });

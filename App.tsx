@@ -18,6 +18,7 @@ import { ToastContainer, ToastMessage } from './components/ui/Toast';
 import { SettingsModal } from './components/modals/SettingsModal';
 import { BatchOpenModal } from './components/modals/BatchOpenModal';
 import { UpdateModal } from './components/modals/UpdateModal';
+import { HelpModal } from './components/modals/HelpModal';
 import { useUpdateNotifications } from './hooks/useUpdateNotifications';
 
 
@@ -45,6 +46,7 @@ const App: React.FC = () => {
 
     const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
     const [isBatchOpenModalOpen, setIsBatchOpenModalOpen] = useState(false);
+    const [isHelpOpen, setIsHelpOpen] = useState(false);
 
     // Update notifications integration
     // Version is injected at build via Vite define
@@ -430,6 +432,30 @@ const App: React.FC = () => {
         reader.readAsText(file);
     };
 
+    // (CSV export removed per request)
+
+    // Keyboard shortcuts: '/', 'b', '?'
+    useEffect(() => {
+        const handler = (e: KeyboardEvent) => {
+            const tag = (e.target as HTMLElement)?.tagName?.toLowerCase();
+            const typing = tag === 'input' || tag === 'textarea' || (e.target as HTMLElement)?.isContentEditable;
+            if (typing) return;
+            if (e.key === '/') {
+                e.preventDefault();
+                const el = document.getElementById('app-search-input') as HTMLInputElement | null;
+                el?.focus();
+            } else if (e.key.toLowerCase() === 'b') {
+                e.preventDefault();
+                setIsBatchOpenModalOpen(true);
+            } else if (e.key === '?') {
+                e.preventDefault();
+                setIsHelpOpen(prev => !prev);
+            }
+        };
+        window.addEventListener('keydown', handler);
+        return () => window.removeEventListener('keydown', handler);
+    }, []);
+
     const mainContent = useMemo(() => {
         if (!user || !isConnected) {
             return (
@@ -565,6 +591,7 @@ const App: React.FC = () => {
                 onAcknowledge={acknowledgeUpdate}
                 html={updateHtml}
             />
+            <HelpModal isOpen={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
             <ToastContainer toasts={toasts} />
         </div>
     );

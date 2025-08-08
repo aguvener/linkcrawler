@@ -139,6 +139,7 @@ export const Header: React.FC<HeaderProps> = ({searchQuery, setSearchQuery, filt
                   <div className="relative col-span-3">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={20} />
                     <input
+                      id="app-search-input"
                       type="text"
                       placeholder="Search links, senders, messages..."
                       value={searchQuery}
