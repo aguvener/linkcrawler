@@ -91,7 +91,7 @@ export const LinkItem: React.FC<LinkItemProps> = ({ link, isOpened, onDelete, on
     };
 
     return (
-        <div className={`items-center justify-center flex-shrink-0 ${baseClasses} ${colorClasses} ${opacityClass} ${isDeleting ? 'animate-slide-out-left' : 'animate-slide-in-down'}`}>
+        <div className={`w-full items-center justify-center flex-shrink-0 ${baseClasses} ${colorClasses} ${opacityClass} ${isDeleting ? 'animate-slide-out-left' : 'animate-slide-in-down'}`}>
             {link.count > 1 && (
                 <div className="absolute -top-2 -left-2 w-7 h-7 bg-cyan-500 text-white text-xs font-bold flex items-center justify-center rounded-full border-2 border-slate-900 z-10">
                     {link.count}

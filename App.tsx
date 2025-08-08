@@ -573,7 +573,7 @@ const App: React.FC = () => {
                     />
             {/* Main content flows naturally - no forced height */}
             <main className="pt-20 pb-4">
-                <div className="container">
+                <div className="w-full px-4">
                     {mainContent}
                 </div>
             </main>

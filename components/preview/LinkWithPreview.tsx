@@ -76,6 +76,7 @@ export const LinkWithPreview: React.FC<LinkWithPreviewProps> = ({
   const portalEl = useRef<HTMLDivElement | null>(null);
   const [mounted, setMounted] = useState(false);
   const [autoHeaderOffset, setAutoHeaderOffset] = useState(0);
+  const [reducedMotion, setReducedMotion] = useState(false);
 
   const tooltipId = useId();
   const usePortal = !(
@@ -111,6 +112,22 @@ export const LinkWithPreview: React.FC<LinkWithPreviewProps> = ({
       portalEl.current = null;
       setMounted(false);
     };
+  }, []);
+
+  // Respect reduced motion: disable hover-triggered previews
+  useEffect(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return;
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const set = () => setReducedMotion(!!mq.matches);
+    set();
+    try {
+      mq.addEventListener('change', set);
+      return () => mq.removeEventListener('change', set);
+    } catch {
+      // Safari fallback
+      mq.addListener?.(set);
+      return () => mq.removeListener?.(set);
+    }
   }, []);
 
   // Prefetch when in viewport
@@ -390,6 +407,7 @@ export const LinkWithPreview: React.FC<LinkWithPreviewProps> = ({
 
   const handleMouseEnter = (e: React.MouseEvent<HTMLAnchorElement>) => {
     onMouseEnter?.(e);
+    if (reducedMotion) return; // do not open on hover when reduced motion
     if (typeof process !== 'undefined' && process.env && process.env.NODE_ENV !== 'production') {
       // eslint-disable-next-line no-console
       console.debug("[LWP] onMouseEnter");
@@ -595,8 +613,7 @@ export const LinkWithPreview: React.FC<LinkWithPreviewProps> = ({
         onBlur={handleBlur}
         onKeyDown={handleKeyDown}
         aria-describedby={open ? tooltipId : undefined}
-        aria-haspopup="dialog"
-        aria-expanded={open || undefined}
+        // tooltip is non-interactive; no dialog semantics
         className={className}
         // Ensure the link is focusable and receives events
         tabIndex={0}
