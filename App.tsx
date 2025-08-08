@@ -48,7 +48,7 @@ const App: React.FC = () => {
 
     // Update notifications integration
     // Define the current app version here; update when you release.
-    const APP_VERSION = '1.2.0';
+    const APP_VERSION = '1.3.0';
     const { isOpen: isUpdateOpen, html: updateHtml, close: closeUpdate, acknowledge: acknowledgeUpdate } =
         useUpdateNotifications({
             appVersion: APP_VERSION,
@@ -506,27 +506,32 @@ const App: React.FC = () => {
 
 
     return (
-        <div className="flex flex-col h-screen bg-slate-900 text-slate-100 font-sans overflow-hidden">
+        <div className="min-h-screen" style={{ background: 'var(--color-bg)', color: 'var(--color-text)', fontFamily: 'var(--font-sans)' }}>
             <Favicon url="/favicon.ico" alertCount={filteredLinks.filter(link => link.url && !openedLinks[link.url]).length} iconSize={128} />
-            <Header
-                progress={totalMessages}
-                goal={PROGRESS_GOAL}
-                searchQuery={searchQuery}
-                setSearchQuery={setSearchQuery}
-                filter={filter}
-                setFilter={setFilter}
-                user={user}
-                isConnected={isConnected}
-            />
-            <main className="flex-1 overflow-y-auto pb-24">
-                {mainContent}
+            {/* Full-bleed sticky header */}
+                    <Header
+                        progress={totalMessages}
+                        goal={PROGRESS_GOAL}
+                        searchQuery={searchQuery}
+                        setSearchQuery={setSearchQuery}
+                        filter={filter}
+                        setFilter={setFilter}
+                        user={user}
+                        isConnected={isConnected}
+                    />
+            {/* Main content flows naturally - no forced height */}
+            <main className="pt-20 pb-4">
+                <div className="container">
+                    {mainContent}
+                </div>
             </main>
-            <Footer
-                onBatchOpen={() => setIsBatchOpenModalOpen(true)}
-                onSettings={() => setIsSettingsModalOpen(true)}
-                openLinkCount={filteredLinks.filter(link => link.url && !openedLinks[link.url]).length}
-                user={user}
-            />
+            {/* Footer flows after content - no gap */}
+                    <Footer
+                        onBatchOpen={() => setIsBatchOpenModalOpen(true)}
+                        onSettings={() => setIsSettingsModalOpen(true)}
+                        openLinkCount={filteredLinks.filter(link => link.url && !openedLinks[link.url]).length}
+                        user={user}
+                    />
             <BatchOpenModal
                 isOpen={isBatchOpenModalOpen}
                 onClose={() => setIsBatchOpenModalOpen(false)}
