@@ -137,11 +137,12 @@ export function isEligibleForNotification(from: string | null, to: string, optio
   }
   const bump = classifyBump(from, to);
   if (minorMajorOnly) {
-    if (bump === 'major' || bump === 'minor') return true;
+    // If target is a prerelease, apply prerelease gating regardless of bump type
     if (isPrerelease(to)) {
-      return allowPrereleaseIfFromPrerelease && isPrerelease(from);
+      return allowPrereleaseIfFromPrerelease ? isPrerelease(from) : false;
     }
-    return false;
+    // Otherwise only notify on minor/major
+    return bump === 'major' || bump === 'minor';
   }
   if (isPrerelease(to)) {
     return allowPrereleaseIfFromPrerelease ? isPrerelease(from) : false;

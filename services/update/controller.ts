@@ -34,15 +34,13 @@ export class UpdateController {
 
   async init(): Promise<void> {
     initializeStorage();
-    console.log('DEBUG: UpdateController init called. checkOnIntervalMs:', this.config.checkOnIntervalMs);
+    if (typeof process !== 'undefined' && process.env && process.env.NODE_ENV !== 'production') {
+      // eslint-disable-next-line no-console
+      console.log('DEBUG: UpdateController init called. checkOnIntervalMs:', this.config.checkOnIntervalMs);
+    }
     await this.checkAndMaybeShow();
 
-    if (this.config.checkOnIntervalMs > 0) {
-      this.timer = window.setInterval(() => {
-        console.log('DEBUG: checkAndMaybeShow called by interval.');
-        this.checkAndMaybeShow().catch(err => this.config.onError?.(err));
-      }, this.config.checkOnIntervalMs);
-    }
+    // Polling disabled: modal update will not refresh automatically
 
     // Multi-tab: listen for ping to hide if seen elsewhere
     onPing(() => {
@@ -75,7 +73,10 @@ export class UpdateController {
   }
 
   private async checkAndMaybeShow(): Promise<void> {
-    console.log('DEBUG: checkAndMaybeShow started.');
+    if (typeof process !== 'undefined' && process.env && process.env.NODE_ENV !== 'production') {
+      // eslint-disable-next-line no-console
+      console.log('DEBUG: checkAndMaybeShow started.');
+    }
     if (this.disposed) return;
     const current = this.config.appVersion;
     const lastSeen = getLastSeenVersion();
@@ -185,12 +186,18 @@ export class UpdateController {
       .map((r, idx) => {
         const md = toMarkdown(r);
         const rendered = marked.parse(md);
-        console.log('DEBUG: Marked.parse output (rendered):', rendered);
+        if (typeof process !== 'undefined' && process.env && process.env.NODE_ENV !== 'production') {
+          // eslint-disable-next-line no-console
+          console.log('DEBUG: Marked.parse output (rendered):', rendered);
+        }
 
         // Sanitize with a DOMPurify instance bound to globalThis for browser runtime
         const purifier = createDOMPurify(globalThis as unknown as Window & typeof globalThis);
         const safe = purifier.sanitize(typeof rendered === 'string' ? rendered : String(rendered));
-        console.log('DEBUG: DOMPurify sanitized output (safe):', safe);
+        if (typeof process !== 'undefined' && process.env && process.env.NODE_ENV !== 'production') {
+          // eslint-disable-next-line no-console
+          console.log('DEBUG: DOMPurify sanitized output (safe):', safe);
+        }
 
         const open = idx === 0 ? ' open' : '';
         const detailsHtml = `
@@ -200,7 +207,10 @@ export class UpdateController {
     ${safe}
   </div>
 </details>`.trim();
-        console.log('DEBUG: Final details HTML structure:', detailsHtml);
+        if (typeof process !== 'undefined' && process.env && process.env.NODE_ENV !== 'production') {
+          // eslint-disable-next-line no-console
+          console.log('DEBUG: Final details HTML structure:', detailsHtml);
+        }
         return detailsHtml;
       })
       .join('\n');

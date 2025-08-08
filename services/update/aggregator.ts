@@ -99,13 +99,13 @@ function isMinorOrMajorDiff(from: string | null, to: string): boolean {
     const m = to.match(/^(\d+)\.(\d+)\.(\d+)(?:-.+)?$/);
     if (!m) return true;
     const patch = Number(m[3]);
-    return patch === 0; // treat x.y.0 as non-patch; skip x.y.z where z>0
+    return patch === 0; // treat x.y.0 as eligible; skip x.y.z where z>0
   }
   // Compare only core differences
-  const [aMaj, aMin, aPat] = core(from);
+  const [aMaj, aMin] = core(from);
   const [bMaj, bMin, bPat] = core(to);
-  if (bMaj !== aMaj) return true;
-  if (bMin !== aMin) return true;
+  if (bMaj !== aMaj) return bPat === 0 && bMin === 0; // include only x.0.0 when major changes
+  if (bMin !== aMin) return bPat === 0; // include only x.y.0 when minor changes
   return false; // same major/minor => patch/prerelease only
 }
 
