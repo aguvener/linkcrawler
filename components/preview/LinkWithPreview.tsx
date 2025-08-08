@@ -535,6 +535,7 @@ export const LinkWithPreview: React.FC<LinkWithPreviewProps> = ({
                   width={320}
                   height={160}
                   decoding="async"
+                  referrerPolicy="no-referrer"
                   onLoad={scheduleRecompute}
                 />
               </div>

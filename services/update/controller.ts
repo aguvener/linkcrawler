@@ -193,6 +193,28 @@ export class UpdateController {
 
         // Sanitize with a DOMPurify instance bound to globalThis for browser runtime
         const purifier = createDOMPurify(globalThis as unknown as Window & typeof globalThis);
+        // Tight allowlist: text + links + lists + headings + code
+        purifier.setConfig({
+          ALLOWED_TAGS: ['a','p','ul','ol','li','strong','em','code','pre','h3','h4','h5','h6','br'],
+          ALLOWED_ATTR: ['href','title','target','rel'],
+          ALLOWED_URI_REGEXP: /^https?:/i,
+          KEEP_CONTENT: false,
+        } as any);
+        // Enforce safe anchors
+        purifier.addHook('afterSanitizeAttributes', (node: Element) => {
+          if (node.tagName === 'A') {
+            const href = node.getAttribute('href');
+            try {
+              if (!href) return node.removeAttribute('href');
+              const u = new URL(href, 'https://example.invalid');
+              if (!/^https?:$/i.test(u.protocol)) node.removeAttribute('href');
+            } catch {
+              node.removeAttribute('href');
+            }
+            node.setAttribute('rel', 'noopener noreferrer');
+            node.setAttribute('target', '_blank');
+          }
+        });
         const safe = purifier.sanitize(typeof rendered === 'string' ? rendered : String(rendered));
         if (typeof process !== 'undefined' && process.env && process.env.NODE_ENV !== 'production') {
           // eslint-disable-next-line no-console

@@ -118,6 +118,9 @@ export async function fetchPreviewClientOnly(url: string, options: FetchPreviewO
 
     const data = await res.json();
 
+    const rawFavicon = sanitizeUrl(data?.favicon || data?.favicons?.[0]);
+    const proxiedFavicon = rawFavicon ? `${API_ENDPOINT.replace(/link-preview$/, 'proxy-favicon')}?url=${encodeURIComponent(rawFavicon)}` : undefined;
+
     const preview: PreviewData = {
       url: sanitizeUrl(data?.url) ?? safeUrl,
       title: sanitizeText(data?.title),
@@ -125,7 +128,7 @@ export async function fetchPreviewClientOnly(url: string, options: FetchPreviewO
       siteName: sanitizeText(data?.siteName || data?.site_name),
       images: sanitizeArrayUrls(data?.images) || (sanitizeUrl(data?.image) ? [sanitizeUrl(data?.image)!] : undefined),
       mediaType: sanitizeText(data?.mediaType || data?.media_type),
-      favicon: sanitizeUrl(data?.favicon || data?.favicons?.[0]),
+      favicon: proxiedFavicon,
     };
 
     if (!preview.title && !preview.description && !preview.images?.length && !preview.siteName) {

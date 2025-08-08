@@ -1,0 +1,105 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Colors */
+  --color-bg: #0b0c10;
+  --color-surface: #111217;
+  --color-surface-2: #171924;
+  --color-border: #2a2e39;
+  --color-primary: #5b8cff;
+  --color-primary-600: #3f6df5;
+  --color-primary-700: #2f54c5;
+  --color-success: #22c55e;
+  --color-warning: #f59e0b;
+  --color-danger: #ef4444;
+  --color-text: #e6e8ef;
+  --color-text-muted: #a5adbb;
+
+  /* Typography */
+  --font-sans: Inter, ui-sans-serif, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+
+  --fs-12: 0.75rem;
+  --fs-14: 0.875rem;
+  --fs-16: 1rem;
+  --fs-18: 1.125rem;
+  --fs-20: 1.25rem;
+  --fs-24: 1.5rem;
+  --fs-32: 2rem;
+
+  /* Spacing (4-based) */
+  --sp-4: 0.25rem;
+  --sp-8: 0.5rem;
+  --sp-12: 0.75rem;
+  --sp-16: 1rem;
+  --sp-20: 1.25rem;
+  --sp-24: 1.5rem;
+  --sp-32: 2rem;
+
+  /* Radii */
+  --radius-4: 4px;
+  --radius-8: 8px;
+  --radius-12: 12px;
+
+  /* Shadows */
+  --shadow-1: 0 1px 2px rgba(0,0,0,.25);
+  --shadow-2: 0 4px 12px rgba(0,0,0,.35);
+  --shadow-3: 0 12px 24px rgba(0,0,0,.45);
+
+  /* Motion */
+  --ease-standard: cubic-bezier(.2,.8,.2,1);
+  --dur-100: 100ms;
+  --dur-150: 150ms;
+  --dur-200: 200ms;
+  --dur-300: 300ms;
+
+  /* Layout */
+  --container-max: 1040px;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --color-bg: #ffffff;
+    --color-surface: #f7f8fb;
+    --color-surface-2: #eef0f6;
+    --color-border: #d9deea;
+    --color-primary: #3f6df5;
+    --color-primary-600: #3358cc;
+    --color-primary-700: #2946a3;
+    --color-text: #1b1e26;
+    --color-text-muted: #5b6478;
+    --shadow-1: 0 1px 2px rgba(16,24,40,.06);
+    --shadow-2: 0 4px 12px rgba(16,24,40,.12);
+    --shadow-3: 0 12px 24px rgba(16,24,40,.18);
+  }
+}
+
+/* Browser-like zoom using CSS zoom (Chromium-only). */
+html {
+  zoom: 0.67; /* ~67% zoom */
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  font-size: var(--fs-16);
+  line-height: 1.5;
+  height: 100%;
+}
+
+#root { height: 100%; }
+
+.container {
+  max-width: var(--container-max);
+  margin: 0 auto;
+  padding: 0 var(--sp-16);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: var(--radius-4);
+}
