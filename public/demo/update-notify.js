@@ -1,4 +1,4 @@
-import { UpdateController } from '../../services/update/controller.js';
+import { UpdateController } from '../../src/services/update/controller.ts';
 
 // Lightweight vanilla modal using the controller's HTML output
 function createModal({ html, onAcknowledge, onClose }) {

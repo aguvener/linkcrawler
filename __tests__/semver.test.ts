@@ -12,7 +12,7 @@ import {
   classifyBump,
   inOpenClosedRange,
   isEligibleForNotification,
-} from '../services/update/semver';
+} from '../src/services/update/semver';
 
 describe('semver.parse', () => {
   it('parses basic versions', () => {

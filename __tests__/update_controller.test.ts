@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { UpdateController } from '../services/update/controller';
-import { setLastSeenVersion, addSilentVersion } from '../services/update/versionStorage';
+import { UpdateController } from '../src/services/update/controller';
+import { setLastSeenVersion, addSilentVersion } from '../src/services/update/versionStorage';
 
 const SAMPLE = `
 # Changelog

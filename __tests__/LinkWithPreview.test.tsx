@@ -2,20 +2,20 @@ import React from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { LinkWithPreview } from "../components/preview/LinkWithPreview";
+import { LinkWithPreview } from "../src/components/preview/LinkWithPreview";
 
 // Mock CSS module
-vi.mock("../components/preview/LinkWithPreview.module.css", () => ({
+vi.mock("../src/components/preview/LinkWithPreview.module.css", () => ({
   default: new Proxy({}, { get: (_t, p: string) => p }),
 }), { virtual: true });
 
 // Mock services to use proxy fetcher
-vi.mock("../services/fetchPreview", () => ({
+vi.mock("../src/services/fetchPreview", () => ({
   fetchPreviewClientOnly: vi.fn(),
 }));
 
-vi.mock("../services/previewCache", async () => {
-  const actual = await vi.importActual<any>("../services/previewCache");
+vi.mock("../src/services/previewCache", async () => {
+  const actual = await vi.importActual<any>("../src/services/previewCache");
   return {
     ...actual,
     getOrFetch: vi.fn((url: string, fetcher: (u: string) => Promise<any>, _ttl: number) => fetcher(url)),
@@ -24,7 +24,7 @@ vi.mock("../services/previewCache", async () => {
   };
 });
 
-import { fetchPreviewClientOnly } from "../services/fetchPreview";
+import { fetchPreviewClientOnly } from "../src/services/fetchPreview";
 
 describe("LinkWithPreview (proxy mode)", () => {
   let user: ReturnType<typeof userEvent.setup>;

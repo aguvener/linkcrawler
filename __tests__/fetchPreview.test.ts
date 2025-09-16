@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { fetchPreviewClientOnly } from '../services/fetchPreview';
+import { fetchPreviewClientOnly } from '../src/services/fetchPreview';
 
 describe('fetchPreviewClientOnly', () => {
   const origFetch = global.fetch;

@@ -2,7 +2,7 @@ import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { UpdateModal } from '../components/modals/UpdateModal';
+import { UpdateModal } from '../src/components/modals/UpdateModal';
 
 describe('UpdateModal accessibility', () => {
   it('focus traps between first and last focusable and closes on Escape', async () => {

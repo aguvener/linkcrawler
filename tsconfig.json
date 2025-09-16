@@ -25,7 +25,7 @@
     "forceConsistentCasingInFileNames": true,
     "paths": {
       "@/*": [
-        "./*"
+        "./src/*"
       ]
     }
   }

@@ -1,13 +1,13 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { parseChangelog } from '../services/update/changelog';
-import { aggregateUnseenReleases } from '../services/update/aggregator';
+import { parseChangelog } from '../src/services/update/changelog';
+import { aggregateUnseenReleases } from '../src/services/update/aggregator';
 import {
   initializeStorage,
   getLastSeenVersion,
   setLastSeenVersion,
   addSeenVersion,
   hasSeenVersion,
-} from '../services/update/versionStorage';
+} from '../src/services/update/versionStorage';
 
 const SAMPLE_CHANGELOG = `
 # Changelog
