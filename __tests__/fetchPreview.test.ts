@@ -47,7 +47,7 @@ describe('fetchPreviewClientOnly', () => {
   });
 
   it('maps 204 to EMPTY_PREVIEW', async () => {
-    (global.fetch as any).mockResolvedValueOnce(new Response('', { status: 204 }));
+    (global.fetch as any).mockResolvedValueOnce(new Response(null, { status: 204 }));
     const res = await fetchPreviewClientOnly('https://ex.ample/page');
     expect((res as any).error).toBe(true);
     expect((res as any).code).toBe('EMPTY_PREVIEW');
@@ -81,4 +81,3 @@ describe('fetchPreviewClientOnly', () => {
     expect((res as any).code).toBe('TIMEOUT');
   });
 });
-

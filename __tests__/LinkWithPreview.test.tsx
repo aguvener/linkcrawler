@@ -1,7 +1,6 @@
 import React from "react";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, act } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { render, screen, act, fireEvent, cleanup } from "@testing-library/react";
 import { LinkWithPreview } from "../src/components/preview/LinkWithPreview";
 
 // Mock CSS module
@@ -27,7 +26,6 @@ vi.mock("../src/services/previewCache", async () => {
 import { fetchPreviewClientOnly } from "../src/services/fetchPreview";
 
 describe("LinkWithPreview (proxy mode)", () => {
-  let user: ReturnType<typeof userEvent.setup>;
   const flush = async () => {
     await act(async () => {
       vi.runOnlyPendingTimers();
@@ -36,14 +34,14 @@ describe("LinkWithPreview (proxy mode)", () => {
   };
 
   beforeEach(() => {
-    user = userEvent.setup();
-    vi.useFakeTimers({ toFake: ["setTimeout", "setInterval"] });
+    vi.useFakeTimers();
     (fetchPreviewClientOnly as any).mockReset();
   });
 
   afterEach(() => {
     vi.clearAllTimers();
     vi.useRealTimers();
+    cleanup();
   });
 
   it("shows preview after hover delay and hides on mouse leave", async () => {
@@ -63,7 +61,9 @@ describe("LinkWithPreview (proxy mode)", () => {
 
     const link = screen.getByRole("link", { name: "Example" });
 
-    await user.hover(link);
+    act(() => {
+      fireEvent.mouseEnter(link);
+    });
     await act(async () => {
       vi.advanceTimersByTime(300);
     });
@@ -73,7 +73,9 @@ describe("LinkWithPreview (proxy mode)", () => {
     expect(tip1).not.toBeNull();
     expect(screen.getByText(/Example Domain/i)).toBeInTheDocument();
 
-    await user.unhover(link);
+    act(() => {
+      fireEvent.mouseLeave(link);
+    });
     await act(async () => {
       vi.advanceTimersByTime(500);
     });
@@ -82,7 +84,7 @@ describe("LinkWithPreview (proxy mode)", () => {
     // It may still exist briefly due to grace period, but should close soon after
     // Give a bit more time to let close settle
     await act(async () => {
-      vi.advanceTimersByTime(200);
+      vi.advanceTimersByTime(800);
     });
 
     // Tooltip might be removed from DOM
@@ -101,7 +103,10 @@ describe("LinkWithPreview (proxy mode)", () => {
 
     const link = screen.getByRole("link", { name: "Link" });
 
-    link.focus();
+    act(() => {
+      link.focus();
+      fireEvent.focus(link);
+    });
     await act(async () => {
       vi.advanceTimersByTime(20);
     });
@@ -110,24 +115,40 @@ describe("LinkWithPreview (proxy mode)", () => {
     expect(tip2).not.toBeNull();
 
     // Escape dismiss
-    await user.keyboard("{Escape}");
+    act(() => {
+      fireEvent.keyDown(link, { key: "Escape" });
+    });
+    await act(async () => {
+      await Promise.resolve();
+    });
     await act(async () => {
       vi.advanceTimersByTime(200);
     });
     await flush();
+    await flush();
+    expect(link).not.toHaveAttribute("aria-describedby");
     expect(screen.queryByRole("tooltip")).toBeNull();
 
     // Focus again then blur
-    link.focus();
+    act(() => {
+      link.focus();
+      fireEvent.focus(link);
+    });
     await act(async () => {
       vi.advanceTimersByTime(20);
     });
     await flush();
-    expect(await screen.findByRole("tooltip")).toBeInTheDocument();
+    expect(screen.getByRole("tooltip")).toBeInTheDocument();
 
-    link.blur();
+    act(() => {
+      link.blur();
+      fireEvent.blur(link);
+    });
     await act(async () => {
-      vi.advanceTimersByTime(200);
+      await Promise.resolve();
+    });
+    await act(async () => {
+      vi.advanceTimersByTime(800);
     });
     await flush();
     expect(screen.queryByRole("tooltip")).toBeNull();
@@ -143,7 +164,9 @@ describe("LinkWithPreview (proxy mode)", () => {
     render(<LinkWithPreview href="https://example.com">X</LinkWithPreview>);
 
     const link = screen.getByRole("link", { name: "X" });
-    await user.hover(link);
+    act(() => {
+      fireEvent.mouseEnter(link);
+    });
     await act(async () => {
       vi.advanceTimersByTime(300);
     });
@@ -157,7 +180,9 @@ describe("LinkWithPreview (proxy mode)", () => {
   it("guards invalid URLs and does not crash", async () => {
     render(<LinkWithPreview href="mailto:test@example.com">Mail</LinkWithPreview>);
     const link = screen.getByRole("link", { name: "Mail" });
-    await user.hover(link);
+    act(() => {
+      fireEvent.mouseEnter(link);
+    });
     await act(async () => {
       vi.advanceTimersByTime(300);
     });

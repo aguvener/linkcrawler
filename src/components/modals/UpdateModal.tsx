@@ -10,6 +10,32 @@ type UpdateModalProps = {
 export const UpdateModal: React.FC<UpdateModalProps> = ({ isOpen, onClose, onAcknowledge, html }) => {
   const dialogRef = useRef<HTMLDivElement | null>(null);
   const lastFocused = useRef<HTMLElement | null>(null);
+  const focusDirection = useRef<'forward' | 'backward'>('forward');
+
+  const getFocusableElements = () => {
+    const container = dialogRef.current;
+    if (!container) return [];
+    return Array.from(
+      container.querySelectorAll<HTMLElement>(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      )
+    ).filter(
+      el =>
+        !el.hasAttribute('disabled') &&
+        !el.getAttribute('aria-hidden') &&
+        !el.hasAttribute('data-focus-guard')
+    );
+  };
+
+  const focusFirstFocusable = () => {
+    const focusables = getFocusableElements();
+    focusables[0]?.focus();
+  };
+
+  const focusLastFocusable = () => {
+    const focusables = getFocusableElements();
+    focusables[focusables.length - 1]?.focus();
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -25,11 +51,8 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({ isOpen, onClose, onAck
         }
         // rudimentary focus trap: cycle within modal controls
         if (e.key === 'Tab') {
-          const container = dialogRef.current;
-          if (!container) return;
-          const focusables = Array.from(container.querySelectorAll<HTMLElement>(
-            'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-          )).filter(el => !el.hasAttribute('disabled') && !el.getAttribute('aria-hidden'));
+          focusDirection.current = e.shiftKey ? 'backward' : 'forward';
+          const focusables = getFocusableElements();
           if (focusables.length === 0) return;
           const first = focusables[0];
           const last = focusables[focusables.length - 1];
@@ -42,8 +65,26 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({ isOpen, onClose, onAck
           }
         }
       };
+      const onFocusIn = (event: FocusEvent) => {
+        const container = dialogRef.current;
+        if (!container) return;
+        const target = event.target as HTMLElement | null;
+        if (!target || container.contains(target)) return;
+        const focusables = getFocusableElements();
+        if (focusables.length === 0) return;
+        if (focusDirection.current === 'backward') {
+          focusables[focusables.length - 1].focus();
+        } else {
+          focusables[0].focus();
+        }
+      };
+
       document.addEventListener('keydown', onKey);
-      return () => document.removeEventListener('keydown', onKey);
+      document.addEventListener('focusin', onFocusIn);
+      return () => {
+        document.removeEventListener('keydown', onKey);
+        document.removeEventListener('focusin', onFocusIn);
+      };
     } else {
       // restore focus
       lastFocused.current?.focus();
@@ -66,6 +107,13 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({ isOpen, onClose, onAck
         tabIndex={-1}
         onClick={e => e.stopPropagation()}
       >
+        <span
+          tabIndex={0}
+          aria-hidden="true"
+          data-focus-guard
+          className="sr-only"
+          onFocus={focusLastFocusable}
+        />
         <header className="flex items-center justify-between border-b border-slate-800 p-4">
           <h2 id="update-modal-title" className="text-xl font-bold text-white">What’s New</h2>
           <button
@@ -103,6 +151,13 @@ export const UpdateModal: React.FC<UpdateModalProps> = ({ isOpen, onClose, onAck
             Got it
           </button>
         </footer>
+        <span
+          tabIndex={0}
+          aria-hidden="true"
+          data-focus-guard
+          className="sr-only"
+          onFocus={focusFirstFocusable}
+        />
       </div>
     </div>
   );

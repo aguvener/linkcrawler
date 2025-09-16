@@ -198,7 +198,6 @@ export class UpdateController {
           ALLOWED_TAGS: ['a','p','ul','ol','li','strong','em','code','pre','h3','h4','h5','h6','br'],
           ALLOWED_ATTR: ['href','title','target','rel'],
           ALLOWED_URI_REGEXP: /^https?:/i,
-          KEEP_CONTENT: false,
         } as any);
         // Enforce safe anchors
         purifier.addHook('afterSanitizeAttributes', (node: Element) => {
@@ -241,7 +240,7 @@ export class UpdateController {
     
     return `
 <div class="update-modal-content">
-  <h2 class="update-title">What's new up to v${escapeHtml(latest || '')}</h2>
+  <h2 class="update-title">What’s new in v${escapeHtml(latest || '')}</h2>
   ${sections}
 </div>`.trim();
   }

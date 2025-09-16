@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { UpdateModal } from '../src/components/modals/UpdateModal';
 
@@ -22,7 +22,7 @@ describe('UpdateModal accessibility', () => {
     expect(dialog).toBeInTheDocument();
 
     // Find Close and Got it buttons
-    const buttons = screen.getAllByRole('button');
+    const buttons = within(dialog).getAllByRole('button');
     // Focus first
     buttons[0].focus();
     expect(document.activeElement).toBe(buttons[0]);
@@ -44,4 +44,3 @@ describe('UpdateModal accessibility', () => {
     );
   });
 });
-
