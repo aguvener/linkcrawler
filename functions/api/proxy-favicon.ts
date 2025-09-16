@@ -13,7 +13,6 @@ const ALLOWED_CONTENT_TYPES = new Set([
   'image/gif',
   'image/jpeg',
   'image/webp',
-  'image/svg+xml',
 ]);
 
 function badRequest(message: string) {
@@ -70,4 +69,3 @@ export const onRequestGet = async (context: { request: Request; env: Env }) => {
 
   return new Response(resp.body, { status: 200, headers: outHeaders });
 };
-

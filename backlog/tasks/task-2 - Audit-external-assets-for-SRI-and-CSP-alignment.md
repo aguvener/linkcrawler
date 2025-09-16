@@ -4,7 +4,7 @@ title: Audit external assets for SRI and CSP alignment
 status: To Do
 assignee: []
 created_date: '2025-09-16 12:09'
-updated_date: '2025-09-16 12:15'
+updated_date: '2025-09-16 13:03'
 labels:
   - security
 dependencies: []
