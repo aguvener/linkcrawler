@@ -615,8 +615,6 @@ export const LinkWithPreview: React.FC<LinkWithPreviewProps> = ({
         aria-describedby={open ? tooltipId : undefined}
         // tooltip is non-interactive; no dialog semantics
         className={className}
-        // Ensure the link is focusable and receives events
-        tabIndex={0}
         style={{ pointerEvents: "auto", position: "relative", zIndex: 1 }}
       >
         {children ?? href}
