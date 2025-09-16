@@ -269,7 +269,19 @@ export const SettingsModal: React.FC<SettingsModalProps> = (props) => {
                             <h3 className="text-lg font-semibold text-slate-200 pt-4">Danger Zone</h3>
                              <Button onClick={() => {
                                  if(window.confirm("Are you sure you want to reset ALL settings to default? This cannot be undone.")){
-                                     localStorage.clear();
+                                     try {
+                                         // Clear only this app's keys to avoid nuking unrelated localStorage
+                                         const PREFIX = 'kickLinkCrawler';
+                                         const keys: string[] = [];
+                                         for (let i = 0; i < localStorage.length; i++) {
+                                             const k = localStorage.key(i);
+                                             if (k && k.startsWith(PREFIX)) keys.push(k);
+                                         }
+                                         keys.forEach(k => localStorage.removeItem(k));
+                                     } catch {
+                                         // Fallback if enumeration fails
+                                         localStorage.clear();
+                                     }
                                      showToast("All settings have been reset.", "success");
                                      setTimeout(() => window.location.reload(), 1000);
                                  }
