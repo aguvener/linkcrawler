@@ -5,6 +5,18 @@ The format follows Keep a Changelog and this project adheres to Semantic Version
 
 ## [Unreleased]
 
+## [1.4.0] - 2025-09-16
+### Changed
+- Reset settings only removes kickLinkCrawler keys from localStorage so unrelated app data is preserved.
+- Update modal focus handling now traps focus within the dialog and restores it reliably for keyboard users.
+
+### Security
+- Reject SVG favicon responses in the Cloudflare proxy with UNSUPPORTED_TYPE 415 errors to avoid unsafe inline content.
+
+### Maintenance
+- Reorganized source files under the src/ directory and refreshed import paths and tooling setup.
+- Added shared Vitest setup and proxy favicon tests to prevent regressions.
+
 ## [1.3.0] - 2025-08-08
 ### Added
 - Update notification system with aggregated release notes modal (Keep a Changelog parser, semantic versioning, and localStorage-backed acknowledgement).
